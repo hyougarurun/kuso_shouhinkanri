@@ -1,5 +1,6 @@
 # 個人設定（チーム共有しない）
 CLAUDE.local.md
+.claude/settings.local.json
 
 # 環境変数
 .env
