@@ -2,9 +2,9 @@
 
 ## 現在の作業
 - 機能: KUSOMEGANE アパレル商品管理ツール（Phase 0: ローカルMVP）
-- 状態: Phase 0.4 完了 → Phase 0.5 着手前
-- 次にやること: Phase 0.5（商品詳細 /products/[id] 画面）に着手
-- ブロッカー: なし
+- 状態: Phase 0.5 完了 → **Phase 0 全体完了**。k2 の動作確認待ち
+- 次にやること: k2 がブラウザで動作確認 → フィードバック対応、または Phase 1 着手判断
+- ブロッカー: なし（AI 解析・キャプション生成機能を動かすには k2 が `.env.local` に ANTHROPIC_API_KEY を設定する必要あり）
 - 未解決の設計判断: なし
 
 ## テスト状況（全 23 件 PASS）
@@ -29,6 +29,7 @@
 - 2026-04-16 Phase 0.2 完了: 商品番号採番・キャプション組み立て・次のアクション・サンプル到着カウントダウン（TC-PN-001〜004, TC-CAP-001〜006, TC-NXT-001〜003, TC-CDN-001〜004 全 PASS、P0-CRITICAL 15件 全 PASS）
 - 2026-04-16 Phase 0.3 完了: ホーム画面 UI（ProductCard, ProgressBar, StatusBadge, SampleCountdown, Summary, FilterTabs, lib/productStatus.ts, lib/seed.ts, lib/colorPalette.ts, globals.css ブランドカラー）。build PASS、dev server 200 返却確認
 - 2026-04-16 Phase 0.4 完了: 新規登録ウィザード（StepA〜D）+ Anthropic API route（/api/analyze-image, /api/generate-caption）+ 画像リサイズ（canvas 800px）+ lib/wizardState.ts + Chip/Field UI。build PASS
+- 2026-04-16 Phase 0.5 完了: 商品詳細 /products/[id]（ヒーロー画像200px + 8STEPタイムライン + STEP5日付入力 + STEP7素材チェックリスト5項目 + キャプションコピー + 商品情報テーブル + 削除機能）。全 6 ルート build PASS、dev server 全 URL 200 返却
 
 ## 設計メモへのリンク
 - [KUSOMEGANE アパレル商品管理ツール 設計メモ](design-notes/kusomegane-apparel.md)
