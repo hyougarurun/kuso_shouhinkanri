@@ -1,0 +1,77 @@
+name: PR Checks
+
+# 全PRで実行する軽量チェック（lint, typecheck, unit test）
+# Branch Protection Rules で必須チェックに指定することを推奨
+
+on:
+  pull_request:
+    branches:
+      - '**'
+
+concurrency:
+  group: pr-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+        env:
+          NODE_ENV: test
+
+  tdd-ledger-check:
+    name: TDD Ledger Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check commit messages for TDD discipline
+        run: |
+          # commit messageにテスト追加/実装の分離がされているか確認
+          echo "Checking recent commits for TDD structure..."
+          git log origin/main..HEAD --pretty=format:"%s" | while read msg; do
+            echo "  - $msg"
+          done
+          # テスト設計のみのcommitが含まれているか確認（厳密チェックはプロジェクトに応じてカスタマイズ）

@@ -1,0 +1,30 @@
+# 個人設定（チーム共有しない）
+CLAUDE.local.md
+
+# 環境変数
+.env
+.env.*
+.env.local
+
+# 依存パッケージ
+node_modules/
+
+# ビルド成果物
+.next/
+dist/
+build/
+out/
+
+# OS生成ファイル
+.DS_Store
+Thumbs.db
+
+# IDE設定
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ログ
+*.log
+npm-debug.log*

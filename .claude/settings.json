@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx *)",
+      "Bash(pnpm *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(ls *)",
+      "Read",
+      "Write",
+      "Edit"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(rm -r -f *)",
+      "Bash(rm -f -r *)",
+      "Bash(sudo rm *)",
+      "Bash(curl * | sh *)",
+      "Bash(curl * | bash *)",
+      "Bash(wget * | sh *)",
+      "Bash(wget * | bash *)",
+      "Bash(sed -i *)",
+      "Bash(sed --in-place *)",
+      "Bash(perl -pi *)",
+      "Bash(perl -i *)",
+      "Bash(awk -i inplace *)",
+      "Bash(python -c *)",
+      "Bash(python3 -c *)",
+      "Bash(node -e *)",
+      "Bash(* > *.ts)",
+      "Bash(* > *.tsx)",
+      "Bash(* > *.js)",
+      "Bash(* > *.jsx)",
+      "Bash(* > *.py)",
+      "Bash(* >> *.ts)",
+      "Bash(* >> *.tsx)",
+      "Bash(* >> *.js)",
+      "Bash(* >> *.jsx)",
+      "Bash(* >> *.py)",
+      "Bash(tee *.ts)",
+      "Bash(tee *.tsx)",
+      "Bash(tee *.js)",
+      "Bash(tee *.py)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(.env.local)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(git reset *)",
+      "Bash(git checkout -- *)",
+      "Bash(git clean *)",
+      "Bash(rm *)",
+      "Bash(docker *)",
+      "Bash(gh pr create *)",
+      "Bash(gh issue create *)",
+      "Bash(* --updateSnapshot *)",
+      "Bash(* -u)",
+      "Bash(* --update-snapshots *)",
+      "Bash(npx jest * -u)",
+      "Bash(npx vitest * -u)",
+      "Bash(pnpm test * -u)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash:git commit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[TDD Check] commitが検出されました。以下を確認してください: (1) docs/test-spec.md のテスト設計は最新か (2) TDD Ledgerを出力したか (3) RED→GREEN→REFACTORの順序を守ったか (4) テストを弱めていないか'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[TDD Integrity] stealth edit防止: Bashでのファイル書き換え（sed -i / perl -pi / python -c / node -e / リダイレクト）は禁止です。ファイル編集は必ずEdit/Writeツールを使用してください。'",
+            "timeout": 3
+          }
+        ]
+      }
+    ]
+  }
+}

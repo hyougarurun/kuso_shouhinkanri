@@ -1,0 +1,148 @@
+name: Critical Tests
+
+# staging→main PR、および main直push時に本番ブロック対象テストを実行
+# Branch Protection Rules で必須チェックに指定すること
+
+on:
+  pull_request:
+    branches:
+      - main
+      - production
+  push:
+    branches:
+      - main
+      - production
+
+concurrency:
+  group: critical-tests-${{ github.ref }}
+  cancel-in-progress: false  # 本番ゲートは途中キャンセル禁止
+
+jobs:
+  run-critical-tests:
+    name: Run P0-CRITICAL Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 差分検出のため履歴を取得
+
+      # ============================================================
+      # Runtime setup - プロジェクトに応じて有効化するブロックを選択
+      # ============================================================
+
+      # --- Node.js / pnpm (Next.js, Vite, 等) ---
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # --- Python (FastAPI, Django, Flask 等) の場合は代わりに以下を使用 ---
+      # - name: Setup Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: '3.11'
+      #     cache: pip
+      # - name: Install dependencies
+      #   run: pip install -r requirements.txt
+
+      # ============================================================
+      # Critical Path Tests
+      # ============================================================
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Run P0-CRITICAL unit tests
+        run: pnpm vitest run --reporter=verbose tests/critical/
+        env:
+          NODE_ENV: test
+
+      - name: Run P0-CRITICAL integration tests
+        run: pnpm vitest run --reporter=verbose tests/integration/critical/
+        env:
+          NODE_ENV: test
+          TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+
+      # --- E2E Tests (Playwright) ---
+      - name: Install Playwright browsers
+        run: pnpm playwright install --with-deps chromium
+
+      - name: Run P0-CRITICAL E2E tests
+        run: pnpm playwright test --grep "@critical"
+        env:
+          STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          STRIPE_TEST_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+
+      # ============================================================
+      # Artifacts - 失敗時の調査用
+      # ============================================================
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            test-results/
+            playwright-report/
+            coverage/
+          retention-days: 14
+
+      - name: Upload Playwright screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-screenshots
+          path: test-results/**/*.png
+          retention-days: 14
+
+  # ============================================================
+  # PR Comment - 失敗時に詳細を投稿
+  # ============================================================
+
+  comment-on-failure:
+    name: Comment on PR if failed
+    needs: run-critical-tests
+    runs-on: ubuntu-latest
+    if: failure() && github.event_name == 'pull_request'
+    steps:
+      - name: Post failure comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ❌ Critical Tests 失敗
+
+              P0-CRITICAL テストが失敗しました。**このPRはmainにマージできません。**
+
+              ### 次のアクション
+              1. Actions タブで失敗したテストの詳細を確認
+              2. 失敗原因を特定して修正
+              3. 修正後、再度CIが通ることを確認
+
+              ### 注意
+              - テストを弱める / skip化 / assertion緩和は禁止（TDD Integrity Contract違反）
+              - flaky test が原因の場合も、暫定回避ではなく根本修正を行う
+              - 詳細は \`.claude/rules/critical-path-protection.md\` を参照
+              `
+            })
