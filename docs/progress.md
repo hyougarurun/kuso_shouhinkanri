@@ -2,8 +2,8 @@
 
 ## 現在の作業
 - 機能: KUSOMEGANE アパレル商品管理ツール（Phase 0: ローカルMVP）
-- 状態: Phase 0.2 完了 → Phase 0.3 着手前
-- 次にやること: Phase 0.3（ホーム画面 UI）に着手
+- 状態: Phase 0.3 完了 → Phase 0.4 着手前
+- 次にやること: Phase 0.4（新規登録ウィザード + Anthropic API route）に着手
 - ブロッカー: なし
 - 未解決の設計判断: なし
 
@@ -27,6 +27,7 @@
 - 2026-04-16 テスト設計完了: `docs/test-spec.md` に 23 テストケース追加（P0-CRITICAL 15件）
 - 2026-04-16 Phase 0.1 完了: Next.js 16 + Tailwind v4 + Vitest + happy-dom 初期化、型定義、定数、LocalStorage 層（TC-STR-001〜006 全 PASS）
 - 2026-04-16 Phase 0.2 完了: 商品番号採番・キャプション組み立て・次のアクション・サンプル到着カウントダウン（TC-PN-001〜004, TC-CAP-001〜006, TC-NXT-001〜003, TC-CDN-001〜004 全 PASS、P0-CRITICAL 15件 全 PASS）
+- 2026-04-16 Phase 0.3 完了: ホーム画面 UI（ProductCard, ProgressBar, StatusBadge, SampleCountdown, Summary, FilterTabs, lib/productStatus.ts, lib/seed.ts, lib/colorPalette.ts, globals.css ブランドカラー）。build PASS、dev server 200 返却確認
 
 ## 設計メモへのリンク
 - [KUSOMEGANE アパレル商品管理ツール 設計メモ](design-notes/kusomegane-apparel.md)
