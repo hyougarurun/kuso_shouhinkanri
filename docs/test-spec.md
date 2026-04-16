@@ -11,12 +11,15 @@
 
 | データID | データ名 | 作成方法 | 作成手順 | 確認方法 | 使用テストケース |
 |---------|---------|---------|---------|---------|--------------|
-| TD-001 | （例）テスト用ユーザーアカウント | 手動作成 | 1. /signup にアクセス → 2. test@example.com / TestPass123! で登録 → 3. メール確認完了 | /login でログインできる | TC-AUTH-001〜005 |
+| TD-LS-001 | 空の LocalStorage | 自動 | 各テストの `beforeEach` で `localStorage.clear()` を呼ぶ | `localStorage.length === 0` | TC-STR-001〜006, TC-PN-001〜002 |
+| TD-PROD-001 | サンプル Product オブジェクト | ファクトリ関数 | `__tests__/fixtures/product.ts` の `makeProduct(overrides?)` を呼ぶ。戻り値は `types/index.ts` の `Product` 型を満たす最小データ | `product.id` が UUID 文字列で `product.productNumber` が `"59"` | TC-STR-002〜005, TC-CAP-001〜006, TC-NXT-001〜003, TC-CDN-001〜004 |
+| TD-PROD-002 | 58番商品（既存最大値検証用） | ファクトリ関数 | `makeProduct({ productNumber: "58", baseProductNumber: 58 })` | `product.baseProductNumber === 58` | TC-PN-002 |
+| TD-PROD-003 | 枝番商品（カラバリ最大番号検証用） | ファクトリ関数 | `makeProduct({ productNumber: "60-2", baseProductNumber: 60 })` | `product.baseProductNumber === 60` | TC-PN-002 |
 
 > **ルール:**
 > - 新しいテストケースを追加する際、必要なテストデータがなければ先にこのテーブルに追加する
 > - 作成手順は「この手順通りにやれば誰でも再現できる」レベルで記述する
-> - 外部サービスのデータ（Stripe, SendGrid等）は環境変数やモックの要否も明記する
+> - ファクトリ関数 `makeProduct` は Phase 0.1 で `__tests__/fixtures/product.ts` に実装する
 
 ---
 
@@ -26,48 +29,542 @@
 
 | チェック項目 | 確認方法 | 未達時の対処 |
 |------------|---------|------------|
-| （例）開発サーバーが起動している | `http://localhost:3000` にアクセス | `npm run dev` を実行 |
-| （例）テストDBにシードデータ投入済み | テーブル件数確認 | `npm run db:seed` を実行 |
+| Node.js 20 以上 | `node -v` で `v20.x.x` 以上 | `nvm install 20` |
+| `kusomegane-apparel/` ディレクトリに Next.js プロジェクトが作成済み | `ls kusomegane-apparel/package.json` | Phase 0.1 の初期化タスクを実行 |
+| 依存パッケージインストール済み | `ls kusomegane-apparel/node_modules/vitest` | `cd kusomegane-apparel && npm ci` |
+| Vitest + jsdom セットアップ済み | `npm run test -- --version` が実行できる | Phase 0.1 で `vitest.config.ts` を作成 |
 
 ---
 
 ## テストケース一覧
 
-### カテゴリ: （例）A. 認証機能
+### カテゴリ: A. LocalStorage 操作（`lib/storage.ts`）
+
+> **モジュール目的:** Phase 0 のデータ永続化層。ブラウザ LocalStorage への Product / Draft の読み書きを一元化する。
+> **P0-CRITICAL 指定理由:** ここが壊れると商品データが全消失する。復旧不能な破壊的影響。
+
+---
 
 | 項目 | 内容 |
 |------|------|
-| **テストケースID** | TC-AUTH-001 |
-| **テスト名** | メール+パスワードで新規登録が成功する |
+| **テストケースID** | TC-STR-001 |
+| **テスト名** | getProducts が初回呼び出し時に空配列を返す |
 | **優先度** | P0-CRITICAL |
 | **CI実行対象** | ✅ critical-tests.yml |
-| **失敗時の影響** | ユーザーが新規登録できず、新規顧客獲得が完全停止する |
-| **カテゴリ** | A. 認証機能 |
-| **所要時間目安** | 3分 |
-| **テストデータ要件** | TD-001（テスト用メールアドレスが未登録の状態） |
-| **前提条件** | - 開発サーバー起動済み<br>- TD-001のメールアドレスが未登録の状態（テスト前にDBから削除するか、別のメールを使用） |
-| **UI実機パス** | `/signup` → 入力フォーム → 「登録」ボタン (`data-testid="signup-submit"`) |
-| **手順** | 1. `/signup` を開く<br>2. メール欄に `test@example.com` を入力<br>3. パスワード欄に `TestPass123!` を入力<br>4. 「登録」ボタンをクリック |
-| **確認ポイント** | ✅ 「登録」ボタンクリック後、`/dashboard` にリダイレクトされる<br>✅ 画面上部に「登録が完了しました」のトースト通知が表示される<br>✅ DBの users テーブルにレコードが追加されている |
-| **NG例** | ❌ 「登録」ボタンが見つからない<br>❌ クリック後にエラー画面が表示される<br>❌ リダイレクト先が `/signup` のまま変わらない |
-| **自動テストパス** | `tests/critical/auth/signup.test.ts`（`@critical` タグ付き） |
-| **最終検証日** | 2026-04-10 |
+| **失敗時の影響** | 初回起動時にエラーになり、アプリ全体が表示不能になる |
+| **カテゴリ** | A. LocalStorage 操作 |
+| **所要時間目安** | < 1秒（ユニットテスト） |
+| **テストデータ要件** | TD-LS-001 |
+| **前提条件** | - `beforeEach` で `localStorage.clear()` を呼んでいる<br>- `jsdom` 環境で Vitest を実行している |
+| **UI実機パス** | ユニットテスト（UI操作なし）。実行: `cd kusomegane-apparel && npm run test -- storage.test.ts -t "TC-STR-001"` |
+| **手順** | 1. `localStorage.clear()` を呼ぶ<br>2. `storage.getProducts()` を呼ぶ |
+| **確認ポイント** | ✅ 戻り値が配列 `[]` であること<br>✅ throw が発生しないこと |
+| **NG例** | ❌ `null` が返る → FAIL<br>❌ `JSON.parse` 系エラーが throw される → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/storage.test.ts`（`@critical` タグ付き） |
+| **最終検証日** | 2026-04-16 |
 | **結果** | ⬜ 未実施 |
-| **発見した問題** | |
-| **改善提案** | |
-| **重要度（実施者判断）** | |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-STR-002 |
+| **テスト名** | saveProducts で保存したデータが getProducts で取得できる |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | データ永続化が機能せず、登録した商品がリロードで消える |
+| **カテゴリ** | A. LocalStorage 操作 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-LS-001, TD-PROD-001 |
+| **前提条件** | `beforeEach` で `localStorage.clear()`。`makeProduct()` で Product オブジェクトを生成 |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- storage.test.ts -t "TC-STR-002"` |
+| **手順** | 1. `const p = makeProduct()`<br>2. `storage.saveProducts([p])`<br>3. `const result = storage.getProducts()` |
+| **確認ポイント** | ✅ `result.length === 1`<br>✅ `result[0].id === p.id`<br>✅ `result[0].productNumber === p.productNumber` |
+| **NG例** | ❌ `result.length === 0` → FAIL（書き込みできていない）<br>❌ オブジェクト型が壊れている（例: colors が文字列化）→ FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/storage.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-STR-003 |
+| **テスト名** | upsertProduct が新規商品を先頭に追加する |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | 新規登録した商品がホーム画面の末尾や中間に挿入され、UXが壊れる |
+| **カテゴリ** | A. LocalStorage 操作 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-LS-001, TD-PROD-001 |
+| **前提条件** | 既存商品を1件 `saveProducts` 済み |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- storage.test.ts -t "TC-STR-003"` |
+| **手順** | 1. `storage.saveProducts([makeProduct({ id: "A" })])`<br>2. `storage.upsertProduct(makeProduct({ id: "B" }))`<br>3. `const result = storage.getProducts()` |
+| **確認ポイント** | ✅ `result.length === 2`<br>✅ `result[0].id === "B"`（新規は先頭）<br>✅ `result[1].id === "A"`<br>✅ `result[0].updatedAt` が ISO8601 形式 |
+| **NG例** | ❌ 新規が末尾に追加される → FAIL<br>❌ `updatedAt` が未設定 → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/storage.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-STR-004 |
+| **テスト名** | upsertProduct が既存 ID の商品を更新する |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | 既存商品の編集が反映されず、常に新規として追加されて重複する |
+| **カテゴリ** | A. LocalStorage 操作 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-LS-001, TD-PROD-001 |
+| **前提条件** | 既存商品 1件保存済み |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- storage.test.ts -t "TC-STR-004"` |
+| **手順** | 1. `storage.saveProducts([makeProduct({ id: "X", name: "旧名" })])`<br>2. `storage.upsertProduct(makeProduct({ id: "X", name: "新名" }))`<br>3. `const result = storage.getProducts()` |
+| **確認ポイント** | ✅ `result.length === 1`（重複なし）<br>✅ `result[0].name === "新名"`<br>✅ `result[0].updatedAt` が更新されている |
+| **NG例** | ❌ `result.length === 2` → FAIL（重複）<br>❌ name が "旧名" のまま → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/storage.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-STR-005 |
+| **テスト名** | deleteProduct で指定 ID の商品が削除される |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | 削除操作が効かない、または全件削除される（どちらも重大） |
+| **カテゴリ** | A. LocalStorage 操作 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-LS-001, TD-PROD-001 |
+| **前提条件** | 2件の商品を保存済み |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- storage.test.ts -t "TC-STR-005"` |
+| **手順** | 1. `storage.saveProducts([makeProduct({ id: "A" }), makeProduct({ id: "B" })])`<br>2. `storage.deleteProduct("A")`<br>3. `const result = storage.getProducts()` |
+| **確認ポイント** | ✅ `result.length === 1`<br>✅ `result[0].id === "B"` |
+| **NG例** | ❌ 両方残る → FAIL（削除されない）<br>❌ 両方消える → FAIL（全件削除は重大バグ） |
+| **自動テストパス** | `kusomegane-apparel/__tests__/storage.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-STR-006 |
+| **テスト名** | getDraft/saveDraft/clearDraft が正しく動作する |
+| **優先度** | P0 |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | ウィザード入力中にリロードするとデータが消える（データ損失の軽微版） |
+| **カテゴリ** | A. LocalStorage 操作 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-LS-001 |
+| **前提条件** | `localStorage.clear()` |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- storage.test.ts -t "TC-STR-006"` |
+| **手順** | 1. `storage.getDraft()` → null を期待<br>2. `storage.saveDraft({ name: "下書き" })`<br>3. `storage.getDraft()` → `{ name: "下書き" }` を期待<br>4. `storage.clearDraft()`<br>5. `storage.getDraft()` → null を期待 |
+| **確認ポイント** | ✅ 初期状態は null<br>✅ 保存後は保存内容が取得できる<br>✅ クリア後は null |
+| **NG例** | ❌ 初期状態で例外が発生 → FAIL<br>❌ クリア後も値が残る → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/storage.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+### カテゴリ: B. 商品番号採番（`lib/productNumber.ts`）
+
+> **モジュール目的:** 商品番号のユニーク採番。LocalStorage の既存商品から最大値を取得し +1 する。複数カラー時は枝番を付与する。
+> **P0-CRITICAL 指定理由:** ダブりが発生すると Phase 1 で Drive フォルダ / Sheets 行が衝突し、物理的に運用が破綻する。
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-PN-001 |
+| **テスト名** | LocalStorage が空のとき、次の商品番号は 59 になる |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | 初回商品番号が想定外（58以下や100など）になり、既存スプシとの連番が狂う |
+| **カテゴリ** | B. 商品番号採番 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-LS-001 |
+| **前提条件** | `localStorage.clear()` |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- productNumber.test.ts -t "TC-PN-001"` |
+| **手順** | 1. `localStorage.clear()`<br>2. `const n = getNextBaseNumber()` |
+| **確認ポイント** | ✅ `n === 59`（現在の最大値 58 + 1） |
+| **NG例** | ❌ `n === 1` → FAIL（初期値が反映されていない）<br>❌ `n === 58` → FAIL（+1 されていない） |
+| **自動テストパス** | `kusomegane-apparel/__tests__/productNumber.test.ts`（`@critical`） |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-PN-002 |
+| **テスト名** | 既存商品の最大 baseProductNumber + 1 が返る（枝番を含む） |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | 商品番号の衝突。Drive フォルダ / Sheets 行の重複。 |
+| **カテゴリ** | B. 商品番号採番 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-LS-001, TD-PROD-002, TD-PROD-003 |
+| **前提条件** | 「58番通常商品」「60-2 枝番商品」の2件を LocalStorage に保存済み |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- productNumber.test.ts -t "TC-PN-002"` |
+| **手順** | 1. `storage.saveProducts([makeProduct({ productNumber: "58", baseProductNumber: 58 }), makeProduct({ productNumber: "60-2", baseProductNumber: 60 })])`<br>2. `const n = getNextBaseNumber()` |
+| **確認ポイント** | ✅ `n === 61`（最大値 60 + 1、枝番商品も正しく解釈される） |
+| **NG例** | ❌ `n === 59` → FAIL（58 しか見ていない）<br>❌ `n === 62` → FAIL（ダブルカウント） |
+| **自動テストパス** | `kusomegane-apparel/__tests__/productNumber.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-PN-003 |
+| **テスト名** | assignProductNumbers はカラー1色のとき枝番なしを返す |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | 単色商品に意図せず枝番（"59-1"）が付く、または無しで複数行生成される |
+| **カテゴリ** | B. 商品番号採番 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | なし（純粋関数） |
+| **前提条件** | なし |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- productNumber.test.ts -t "TC-PN-003"` |
+| **手順** | 1. `const nums = assignProductNumbers(59, ["ブラック"])` |
+| **確認ポイント** | ✅ `nums` が `["59"]` と deep-equal |
+| **NG例** | ❌ `["59-1"]` → FAIL（1色なら枝番不要）<br>❌ 空配列 → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/productNumber.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-PN-004 |
+| **テスト名** | assignProductNumbers はカラー複数のとき枝番付きを順序通り返す |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | カラバリ商品の Product レコード数・番号が狂い、Phase 1 のスプシ同期が破綻 |
+| **カテゴリ** | B. 商品番号採番 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | なし |
+| **前提条件** | なし |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- productNumber.test.ts -t "TC-PN-004"` |
+| **手順** | 1. `const nums = assignProductNumbers(59, ["ブラック", "ホワイト", "ネイビー"])` |
+| **確認ポイント** | ✅ `nums` が `["59-1", "59-2", "59-3"]` と deep-equal |
+| **NG例** | ❌ `["59-0", "59-1", "59-2"]` → FAIL（0始まり禁止）<br>❌ 順序が崩れる → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/productNumber.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+### カテゴリ: C. キャプション組み立て（`lib/caption.ts`・`buildFullCaption`）
+
+> **モジュール目的:** 02_REQUIREMENTS.md の固定テンプレに従い、商品情報とAI生成文を結合して最終キャプションを出力する。
+> **P0-CRITICAL 指定理由:** 販売ページに出力される文面の整合性。受注生産フラグの取り違えや注意事項欠落は規約違反・返品リスクに直結する。
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-CAP-001 |
+| **テスト名** | 受注生産ON・送料無料ON のとき冒頭に2行の警告が出る |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | 購入者に「受注生産」「送料無料」が告知されず、クレーム・返品要求の原因になる |
+| **カテゴリ** | C. キャプション組み立て |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-PROD-001 |
+| **前提条件** | なし |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- caption.test.ts -t "TC-CAP-001"` |
+| **手順** | 1. `const p = makeProduct({ isMadeToOrder: true, freeShipping: true, colors: ["ブラック"], material: "綿100% 5.6oz", processingType: "DTF" })`<br>2. `const text = buildFullCaption(p, "説明文です！", "デザイン説明")` |
+| **確認ポイント** | ✅ 1行目 `※※※※※【この商品は受注生産商品です】※※※※※`<br>✅ 2行目 `※※※※※【この商品に送料はかかりません】※※※※※`<br>✅ 3行目が空行 |
+| **NG例** | ❌ 警告行が欠落 → FAIL<br>❌ 順序が逆 → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/caption.test.ts`（`@critical`） |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-CAP-002 |
+| **テスト名** | 受注生産OFF・送料無料OFF のとき冒頭警告が出ない |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | 在庫販売商品に誤って「受注生産」告知が出て購入者を混乱させる |
+| **カテゴリ** | C. キャプション組み立て |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-PROD-001 |
+| **前提条件** | なし |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- caption.test.ts -t "TC-CAP-002"` |
+| **手順** | 1. `const p = makeProduct({ isMadeToOrder: false, freeShipping: false })`<br>2. `const text = buildFullCaption(p, "説明文", "デザイン")` |
+| **確認ポイント** | ✅ `text` に `受注生産商品です` が含まれない<br>✅ `text` に `送料はかかりません` が含まれない<br>✅ `text` は空でない（description以降は出力される） |
+| **NG例** | ❌ 警告行が1行でも出る → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/caption.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-CAP-003 |
+| **テスト名** | 【商品情報】ブロックにカラー・デザイン・素材が含まれる |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | 購入者が商品情報を確認できず、サイズ・カラー違いでクレーム発生 |
+| **カテゴリ** | C. キャプション組み立て |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-PROD-001 |
+| **前提条件** | なし |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- caption.test.ts -t "TC-CAP-003"` |
+| **手順** | 1. `const p = makeProduct({ colors: ["ブラック", "ホワイト"], material: "綿100% 5.6oz", processingType: "DTF" })`<br>2. `const text = buildFullCaption(p, "desc", "design-1文")` |
+| **確認ポイント** | ✅ `text` に `【商品情報】` を含む<br>✅ `カラー：ブラック・ホワイト` を含む（中黒 `・` 区切り）<br>✅ `デザイン：design-1文` を含む<br>✅ `素材：綿100% 5.6oz` を含む |
+| **NG例** | ❌ `カラー：ブラック,ホワイト`（カンマ区切り）→ FAIL<br>❌ `素材：` 行が欠落 → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/caption.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-CAP-004 |
+| **テスト名** | 加工種別に「刺繍」を含むと「※デザインは刺繍加工です。」が追加される |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | 刺繍加工の注記が抜け、購入者が質感の期待値を誤る |
+| **カテゴリ** | C. キャプション組み立て |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-PROD-001 |
+| **前提条件** | なし |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- caption.test.ts -t "TC-CAP-004"` |
+| **手順** | 1. 純刺繍: `const p1 = makeProduct({ processingType: "刺繍" })`<br>2. 組み合わせ: `const p2 = makeProduct({ processingType: "刺繍+DTF" })`<br>3. 非刺繍: `const p3 = makeProduct({ processingType: "DTF" })`<br>4. それぞれ `buildFullCaption(p, "d", "dd")` を呼ぶ |
+| **確認ポイント** | ✅ p1 の結果に `※デザインは刺繍加工です。` を含む<br>✅ p2 の結果にも含む（部分一致）<br>✅ p3 の結果には含まれない |
+| **NG例** | ❌ `刺繍+DTF` で注記が出ない → FAIL（部分一致判定をミス）<br>❌ `DTF` で注記が出る → FAIL（誤検出） |
+| **自動テストパス** | `kusomegane-apparel/__tests__/caption.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-CAP-005 |
+| **テスト名** | 受注生産ON のとき【注意事項】ブロックが末尾に追加される |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | 3週間納期・返品不可の注意事項が表示されず、クレーム・返金要求が発生 |
+| **カテゴリ** | C. キャプション組み立て |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-PROD-001 |
+| **前提条件** | なし |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- caption.test.ts -t "TC-CAP-005"` |
+| **手順** | 1. `const p = makeProduct({ isMadeToOrder: true })`<br>2. `const text = buildFullCaption(p, "desc", "design")` |
+| **確認ポイント** | ✅ `text` に `【注意事項】` を含む<br>✅ `※受注生産商品になりますので、お届けまで約3週間程度いただいております。ご了承の上お買い求めください。` を含む<br>✅ `※欠陥品を除いて返品、交換は受け付けておりませんのでご理解の程お願いいたします。` を含む（4行全て） |
+| **NG例** | ❌ 4行のうち1行でも欠落 → FAIL<br>❌ 文言が要件定義書 02_REQUIREMENTS.md と1文字でも違う → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/caption.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-CAP-006 |
+| **テスト名** | 受注生産OFF のとき【注意事項】ブロックが出ない |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | 在庫販売商品に「3週間納期」の誤告知が出て購入者を混乱させる |
+| **カテゴリ** | C. キャプション組み立て |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-PROD-001 |
+| **前提条件** | なし |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- caption.test.ts -t "TC-CAP-006"` |
+| **手順** | 1. `const p = makeProduct({ isMadeToOrder: false })`<br>2. `const text = buildFullCaption(p, "desc", "design")` |
+| **確認ポイント** | ✅ `text` に `【注意事項】` を**含まない**<br>✅ `3週間程度` を含まない |
+| **NG例** | ❌ 注意事項が1行でも出る → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/caption.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+### カテゴリ: D. 次のアクション計算（`lib/nextAction.ts`）
+
+> **モジュール目的:** ホームカードの「次:」欄に表示する文字列を計算する。`currentStep` と `steps[]` から「次の未完了ステップ名」を導出し、全完了時は「✨ 販売中」を返す。
+> **優先度:** P0（ホームでの表示情報。間違っても販売には影響しないが UX 重要）
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-NXT-001 |
+| **テスト名** | 全未完了時、次のアクションは STEP 1「✏️ デザイン作成」を返す |
+| **優先度** | P0 |
+| **CI実行対象** | ❌（critical-tests.yml 対象外、pr-checks で実行） |
+| **失敗時の影響** | ホームカードに意味不明な文字列が出る。販売には影響なし |
+| **カテゴリ** | D. 次のアクション計算 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-PROD-001 |
+| **前提条件** | なし |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- nextAction.test.ts -t "TC-NXT-001"` |
+| **手順** | 1. `const p = makeProduct()`（全 steps が status="pending"）<br>2. `const label = getNextActionLabel(p)` |
+| **確認ポイント** | ✅ `label === "✏️ デザイン作成"`（アイコン + 名前）または同等の定義済み文字列 |
+| **NG例** | ❌ 空文字 → FAIL<br>❌ 「STEP 1」のような番号表記 → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/nextAction.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-NXT-002 |
+| **テスト名** | 途中まで完了時、最初の未完了ステップ名を返す |
+| **優先度** | P0 |
+| **CI実行対象** | ❌ |
+| **失敗時の影響** | 次のアクションが間違って表示され、作業順序を誤る |
+| **カテゴリ** | D. 次のアクション計算 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-PROD-001 |
+| **前提条件** | なし |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- nextAction.test.ts -t "TC-NXT-002"` |
+| **手順** | 1. STEP 1〜3 を `status="done"` にした Product を作る<br>2. `const label = getNextActionLabel(p)` |
+| **確認ポイント** | ✅ `label === "📤 メーカー共有（サンプル依頼）"`（STEP 4） |
+| **NG例** | ❌ STEP 3 の名前が返る → FAIL（「次」の意味を取り違え）<br>❌ STEP 5 の名前が返る → FAIL（完了ステップをスキップしすぎ） |
+| **自動テストパス** | `kusomegane-apparel/__tests__/nextAction.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-NXT-003 |
+| **テスト名** | 全8ステップ完了時、「✨ 販売中」を返す |
+| **優先度** | P0 |
+| **CI実行対象** | ❌ |
+| **失敗時の影響** | 完了商品に「次: STEP 9」などの破綻表記が出る |
+| **カテゴリ** | D. 次のアクション計算 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-PROD-001 |
+| **前提条件** | なし |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- nextAction.test.ts -t "TC-NXT-003"` |
+| **手順** | 1. 全8 step を `status="done"` にした Product を作る<br>2. `const label = getNextActionLabel(p)` |
+| **確認ポイント** | ✅ `label === "✨ 販売中"` |
+| **NG例** | ❌ undefined や空文字 → FAIL<br>❌ STEP 8 の名前が返る → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/nextAction.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+### カテゴリ: E. サンプル到着カウントダウン（`lib/sampleCountdown.ts`）
+
+> **モジュール目的:** `sampleArrivalDate` から現在日までの残日数を計算し、カラー分類（赤/黄/通常）を返す。
+> **優先度:** P0（表示情報）
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-CDN-001 |
+| **テスト名** | 残日数 4 日以上は色分類が "normal" を返す |
+| **優先度** | P0 |
+| **CI実行対象** | ❌ |
+| **失敗時の影響** | ホームの色表示が崩れるが販売影響なし |
+| **カテゴリ** | E. サンプル到着カウントダウン |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | なし（日付のみ） |
+| **前提条件** | `vi.useFakeTimers()` で `2026-04-16T00:00:00Z` に固定 |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- sampleCountdown.test.ts -t "TC-CDN-001"` |
+| **手順** | 1. `vi.setSystemTime(new Date("2026-04-16"))`<br>2. `const r = computeSampleCountdown("2026-04-30")`（残14日） |
+| **確認ポイント** | ✅ `r.daysLeft === 14`<br>✅ `r.color === "normal"` |
+| **NG例** | ❌ `color === "yellow"` や `"red"` → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/sampleCountdown.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-CDN-002 |
+| **テスト名** | 残日数 1〜3 日は色分類が "yellow" を返す |
+| **優先度** | P0 |
+| **CI実行対象** | ❌ |
+| **失敗時の影響** | サンプル到着が近いのに注意喚起色が出ない |
+| **カテゴリ** | E. サンプル到着カウントダウン |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | なし |
+| **前提条件** | `2026-04-16` に固定 |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- sampleCountdown.test.ts -t "TC-CDN-002"` |
+| **手順** | 1. 残3日: `computeSampleCountdown("2026-04-19")`<br>2. 残1日: `computeSampleCountdown("2026-04-17")` |
+| **確認ポイント** | ✅ 両方とも `color === "yellow"`<br>✅ `daysLeft` がそれぞれ 3, 1 |
+| **NG例** | ❌ 残4日が "yellow" になる → FAIL（境界バグ）<br>❌ 残1日が "red" になる → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/sampleCountdown.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-CDN-003 |
+| **テスト名** | 残日数 0 日以下は色分類が "red" を返す |
+| **優先度** | P0 |
+| **CI実行対象** | ❌ |
+| **失敗時の影響** | サンプル到着遅延の警告が出ず、気付きが遅れる |
+| **カテゴリ** | E. サンプル到着カウントダウン |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | なし |
+| **前提条件** | `2026-04-16` に固定 |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- sampleCountdown.test.ts -t "TC-CDN-003"` |
+| **手順** | 1. 当日: `computeSampleCountdown("2026-04-16")`<br>2. 1日超過: `computeSampleCountdown("2026-04-15")` |
+| **確認ポイント** | ✅ 両方とも `color === "red"`<br>✅ `daysLeft` がそれぞれ 0, -1 |
+| **NG例** | ❌ 残0日が "yellow" → FAIL<br>❌ 残-1 が "normal" → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/sampleCountdown.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-CDN-004 |
+| **テスト名** | sampleArrivalDate 未設定時は null を返す |
+| **優先度** | P0 |
+| **CI実行対象** | ❌ |
+| **失敗時の影響** | 未入力状態で NaN 表示や TypeError が発生しカードが壊れる |
+| **カテゴリ** | E. サンプル到着カウントダウン |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | なし |
+| **前提条件** | なし |
+| **UI実機パス** | ユニットテスト。実行: `npm run test -- sampleCountdown.test.ts -t "TC-CDN-004"` |
+| **手順** | 1. `const r1 = computeSampleCountdown(undefined)`<br>2. `const r2 = computeSampleCountdown("")` |
+| **確認ポイント** | ✅ `r1 === null`<br>✅ `r2 === null`<br>✅ throw しない |
+| **NG例** | ❌ オブジェクトが返る → FAIL<br>❌ TypeError が throw される → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/sampleCountdown.test.ts` |
+| **最終検証日** | 2026-04-16 |
+| **結果** | ⬜ 未実施 |
 
 ---
 
 > **テストケース追加時のルール:**
 >
 > 1. 上記のフォーマットをコピーして使用する
-> 2. `UI実機パス` は実際のルーティングとdata-testidを記載する。ボタンが見つからない場合の代替手段も書く
+> 2. `UI実機パス` は実際のルーティングとdata-testidを記載する。ボタンが見つからない場合の代替手段も書く。ユニットテストの場合は `npm run test -- <file>` のコマンドを明記する
 > 3. `テストデータ要件` は必ずテストデータ一覧のIDを参照する。新規データが必要なら先にテストデータ一覧に追加する
 > 4. `前提条件` は「この状態になっていないとテストが実行できない」を全て列挙する
 > 5. `手順` は番号付きステップで、1ステップ1アクション。曖昧な表現（「適切に設定する」等）禁止
 > 6. `NG例` はテスターが「これはFAILなのか判断に迷う」ケースを具体的に記載する
-> 7. `最終検証日` はこの手順で実際にUIを操作して確認した日付。30日以上経過したケースは再検証を推奨
+> 7. `最終検証日` はこの手順で実際に実行して確認した日付。30日以上経過したケースは再検証を推奨
 >
 > **判定基準:**
 > - PASS: 確認ポイントが全て満たされている
@@ -96,8 +593,12 @@
 
 | カテゴリ | 総数 | P0-CRITICAL | P0 | P1 | P2 | PASS | FAIL | SKIP |
 |---------|-----|------------|----|----|----|----|------|------|
-| A. （例）認証機能 | 1 | **1** | 0 | 0 | 0 | 0 | 0 | 0 |
-| **合計** | **1** | **1** | **0** | **0** | **0** | **0** | **0** | **0** |
+| A. LocalStorage 操作 | 6 | **5** | 1 | 0 | 0 | 0 | 0 | 6 |
+| B. 商品番号採番 | 4 | **4** | 0 | 0 | 0 | 0 | 0 | 4 |
+| C. キャプション組み立て | 6 | **6** | 0 | 0 | 0 | 0 | 0 | 6 |
+| D. 次のアクション計算 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 3 |
+| E. サンプル到着カウントダウン | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 4 |
+| **合計** | **23** | **15** | **8** | **0** | **0** | **0** | **0** | **23** |
 
 ### P0-CRITICAL テスト一覧（本番マージブロック対象）
 
@@ -105,7 +606,21 @@ CIで1つでもFAILするとmainブランチへのマージが不可になるテ
 
 | ID | テスト名 | カテゴリ | 自動テストパス |
 |----|---------|---------|--------------|
-| TC-AUTH-001 | メール+パスワードで新規登録が成功する | 認証 | `tests/critical/auth/signup.test.ts` |
+| TC-STR-001 | getProducts が初回呼び出し時に空配列を返す | A. LocalStorage | `kusomegane-apparel/__tests__/storage.test.ts` |
+| TC-STR-002 | saveProducts で保存したデータが getProducts で取得できる | A. LocalStorage | 同上 |
+| TC-STR-003 | upsertProduct が新規商品を先頭に追加する | A. LocalStorage | 同上 |
+| TC-STR-004 | upsertProduct が既存 ID の商品を更新する | A. LocalStorage | 同上 |
+| TC-STR-005 | deleteProduct で指定 ID の商品が削除される | A. LocalStorage | 同上 |
+| TC-PN-001 | LocalStorage が空のとき、次の商品番号は 59 になる | B. 採番 | `kusomegane-apparel/__tests__/productNumber.test.ts` |
+| TC-PN-002 | 既存商品の最大 baseProductNumber + 1 が返る（枝番を含む） | B. 採番 | 同上 |
+| TC-PN-003 | assignProductNumbers はカラー1色のとき枝番なしを返す | B. 採番 | 同上 |
+| TC-PN-004 | assignProductNumbers はカラー複数のとき枝番付きを順序通り返す | B. 採番 | 同上 |
+| TC-CAP-001 | 受注生産ON・送料無料ON のとき冒頭に2行の警告が出る | C. キャプション | `kusomegane-apparel/__tests__/caption.test.ts` |
+| TC-CAP-002 | 受注生産OFF・送料無料OFF のとき冒頭警告が出ない | C. キャプション | 同上 |
+| TC-CAP-003 | 【商品情報】ブロックにカラー・デザイン・素材が含まれる | C. キャプション | 同上 |
+| TC-CAP-004 | 加工種別に「刺繍」を含むと注記が追加される | C. キャプション | 同上 |
+| TC-CAP-005 | 受注生産ON のとき【注意事項】ブロックが末尾に追加される | C. キャプション | 同上 |
+| TC-CAP-006 | 受注生産OFF のとき【注意事項】ブロックが出ない | C. キャプション | 同上 |
 
 ---
 
@@ -114,3 +629,4 @@ CIで1つでもFAILするとmainブランチへのマージが不可になるテ
 | 日付 | 変更者 | 変更内容 | 関連commit |
 |------|-------|---------|-----------|
 | 2026-04-10 | - | テスト仕様書テンプレート作成 | 初期作成 |
+| 2026-04-16 | Claude (k2指示) | KUSOMEGANE アパレル管理ツール Phase 0 のロジック層テストケース 23件を追加（TC-STR-001〜006, TC-PN-001〜004, TC-CAP-001〜006, TC-NXT-001〜003, TC-CDN-001〜004）。P0-CRITICAL 15件指定。テストデータ TD-LS-001/TD-PROD-001〜003 追加 | （このcommitで） |
