@@ -62,4 +62,5 @@ export const STORAGE_KEYS = {
   PRODUCTS: "kusomegane_products",
   SETTINGS: "kusomegane_settings",
   DRAFT: "kusomegane_draft",
+  BODY_MODELS: "kusomegane_body_models",
 } as const

@@ -9,6 +9,8 @@ import {
 import { Chip } from "@/components/ui/Chip"
 import { Field } from "@/components/ui/Field"
 import { WizardBasic, validateBasic } from "@/lib/wizardState"
+import { getColorStyle } from "@/lib/colorPalette"
+import { getBodyModels, getMaterialForModel } from "@/lib/bodyModelStore"
 
 export function StepB_BasicInfo({
   basic,
@@ -73,6 +75,7 @@ export function StepB_BasicInfo({
               key={c}
               selected={basic.colors.includes(c)}
               onClick={() => onChange({ colors: toggle(basic.colors, c) })}
+              colorDot={getColorStyle(c).bg}
             >
               {c}
             </Chip>
@@ -119,14 +122,29 @@ export function StepB_BasicInfo({
         />
       </Field>
 
-      <Field label="ボディ型番" hint="CAB 品番">
+      <Field label="ボディ型番" hint="CAB 品番（リストから選択 or 自由入力）">
         <input
           type="text"
+          list="body-model-list"
           value={basic.bodyModelNumber}
-          onChange={(e) => onChange({ bodyModelNumber: e.target.value })}
+          onChange={(e) => {
+            const val = e.target.value
+            onChange({ bodyModelNumber: val })
+            const mat = getMaterialForModel(val)
+            if (mat) {
+              onChange({ bodyModelNumber: val, material: mat })
+            }
+          }}
           placeholder="例: 5001-01"
           className="w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
         />
+        <datalist id="body-model-list">
+          {getBodyModels().map((m) => (
+            <option key={m.model} value={m.model}>
+              {m.material}
+            </option>
+          ))}
+        </datalist>
       </Field>
 
       <Field label="素材">

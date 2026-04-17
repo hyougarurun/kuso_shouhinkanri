@@ -8,6 +8,8 @@ import { storage } from "@/lib/storage"
 import { getProductStatus } from "@/lib/productStatus"
 import { computeSampleCountdown } from "@/lib/sampleCountdown"
 import { getColorStyle } from "@/lib/colorPalette"
+import { duplicateProduct } from "@/lib/productDuplicate"
+import { resizeImage } from "@/lib/imageResize"
 import { StatusBadge } from "@/components/StatusBadge"
 import { StepTimeline } from "@/components/StepTimeline"
 import {
@@ -87,6 +89,25 @@ export default function ProductDetailPage() {
     }
   }
 
+  function handleDuplicate() {
+    if (!product) return
+    const dup = duplicateProduct(product)
+    storage.upsertProduct(dup)
+    router.push(`/products/${dup.id}`)
+  }
+
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!product) return
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const resized = await resizeImage(file)
+      update({ ...product, imagePreview: resized.dataUrl })
+    } catch {
+      // 画像読み込み失敗は無視
+    }
+  }
+
   function deleteProduct() {
     if (!product) return
     if (!window.confirm(`商品 "${product.name}" を削除します。よろしいですか？`)) return
@@ -145,8 +166,17 @@ export default function ProductDetailPage() {
           </Link>
           <StatusBadge status={status} />
         </div>
+        <label className="absolute bottom-2 right-2 rounded-full bg-white/90 text-black text-[10px] font-bold px-2 py-1 cursor-pointer hover:bg-white">
+          📷 画像を変更
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageChange}
+          />
+        </label>
         <div
-          className="absolute bottom-2 left-2 right-2 space-y-0.5"
+          className="absolute bottom-2 left-2 right-16 space-y-0.5"
           style={{ textShadow: "0 0 3px rgba(0,0,0,0.35)" }}
         >
           <div className="text-[11px] opacity-90">No.{product.productNumber}</div>
@@ -196,8 +226,15 @@ export default function ProductDetailPage() {
           <ProductInfoTable product={product} />
         </section>
 
-        {/* 危険操作 */}
-        <section className="pt-2">
+        {/* アクション */}
+        <section className="pt-2 space-y-2">
+          <button
+            type="button"
+            onClick={handleDuplicate}
+            className="w-full rounded-lg border border-zinc-300 bg-white text-zinc-900 text-xs font-bold py-2 hover:bg-zinc-50"
+          >
+            この商品を複製する
+          </button>
           <button
             type="button"
             onClick={deleteProduct}
