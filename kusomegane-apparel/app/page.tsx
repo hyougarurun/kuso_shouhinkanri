@@ -10,6 +10,8 @@ import {
   summarize,
   FilterValue,
 } from "@/lib/productStatus"
+import { ensureImages } from "@/lib/migrateProduct"
+import { exportProductsZip, downloadBlob } from "@/lib/exportZip"
 import { ProductCard } from "@/components/ProductCard"
 import { Summary } from "@/components/Summary"
 import { FilterTabs } from "@/components/FilterTabs"
@@ -22,12 +24,23 @@ export default function Home() {
   useEffect(() => {
     seedIfEmpty()
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProducts(storage.getProducts())
+    setProducts(storage.getProducts().map(ensureImages))
     setHydrated(true)
   }, [])
 
   const summary = summarize(products)
   const visible = filterProducts(products, filter)
+
+  async function handleBulkDownload() {
+    if (products.length === 0) return
+    try {
+      const blob = await exportProductsZip(products)
+      const date = new Date().toISOString().slice(0, 10)
+      downloadBlob(blob, `KUSOMEGANE_素材_${date}.zip`)
+    } catch {
+      // ZIP生成失敗は無視
+    }
+  }
 
   return (
     <div className="mx-auto max-w-xl px-4 py-5">
@@ -49,8 +62,19 @@ export default function Home() {
         />
       </div>
 
-      <div className="mb-3">
-        <FilterTabs value={filter} onChange={setFilter} />
+      <div className="mb-3 flex items-center gap-2">
+        <div className="flex-1">
+          <FilterTabs value={filter} onChange={setFilter} />
+        </div>
+        {hydrated && products.length > 0 && (
+          <button
+            type="button"
+            onClick={handleBulkDownload}
+            className="shrink-0 rounded-full bg-zinc-900 text-white text-[11px] font-bold px-3 py-1.5 hover:bg-zinc-800 transition"
+          >
+            一括DL
+          </button>
+        )}
       </div>
 
       {!hydrated ? (

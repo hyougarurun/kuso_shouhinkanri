@@ -3,13 +3,15 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { Product, FlowStep, AssetStatus } from "@/types"
+import { Product, FlowStep, AssetStatus, ProductImages } from "@/types"
 import { storage } from "@/lib/storage"
 import { getProductStatus } from "@/lib/productStatus"
 import { computeSampleCountdown } from "@/lib/sampleCountdown"
 import { getColorStyle } from "@/lib/colorPalette"
 import { duplicateProduct } from "@/lib/productDuplicate"
 import { resizeImage } from "@/lib/imageResize"
+import { ensureImages } from "@/lib/migrateProduct"
+import { exportProductZip, downloadBlob } from "@/lib/exportZip"
 import { StatusBadge } from "@/components/StatusBadge"
 import { StepTimeline } from "@/components/StepTimeline"
 import {
@@ -21,6 +23,7 @@ import {
 import { CaptionBlock } from "@/components/CaptionBlock"
 import { ProductInfoTable } from "@/components/ProductInfoTable"
 import { SampleCountdownLabel } from "@/components/SampleCountdown"
+import { ImageSlots, SlotKey } from "@/components/ImageSlots"
 
 function isBooleanKey(k: AssetKey): k is BooleanAssetKey {
   return k === "sizeDetailDone" || k === "captionDone"
@@ -37,7 +40,7 @@ export default function ProductDetailPage() {
     if (!id) return
     const found = storage.getProducts().find((p) => p.id === id) ?? null
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProduct(found)
+    setProduct(found ? ensureImages(found) : null)
     setLoaded(true)
   }, [id])
 
@@ -102,9 +105,65 @@ export default function ProductDetailPage() {
     if (!file) return
     try {
       const resized = await resizeImage(file)
-      update({ ...product, imagePreview: resized.dataUrl })
+      const images: ProductImages = product.images ?? {
+        composite: null,
+        processing: null,
+        wearing: null,
+        sizeDetail: null,
+      }
+      update({
+        ...product,
+        imagePreview: resized.dataUrl,
+        images: { ...images, composite: resized.dataUrl },
+      })
     } catch {
       // 画像読み込み失敗は無視
+    }
+  }
+
+  async function handleSlotUpload(key: SlotKey, file: File) {
+    if (!product) return
+    try {
+      const resized = await resizeImage(file)
+      const images: ProductImages = product.images ?? {
+        composite: null,
+        processing: null,
+        wearing: null,
+        sizeDetail: null,
+      }
+      const next: Product = {
+        ...product,
+        images: { ...images, [key]: resized.dataUrl },
+      }
+      // composite スロット更新時は imagePreview も同期
+      if (key === "composite") {
+        next.imagePreview = resized.dataUrl
+      }
+      update(next)
+    } catch {
+      // 画像読み込み失敗は無視
+    }
+  }
+
+  function handleSlotDelete(key: SlotKey) {
+    if (!product || !product.images) return
+    const next: Product = {
+      ...product,
+      images: { ...product.images, [key]: null },
+    }
+    if (key === "composite") {
+      next.imagePreview = null
+    }
+    update(next)
+  }
+
+  async function handleDownloadZip() {
+    if (!product) return
+    try {
+      const blob = await exportProductZip(product)
+      downloadBlob(blob, `${product.productNumber}_${product.name}.zip`)
+    } catch {
+      // ZIP生成失敗は無視
     }
   }
 
@@ -185,6 +244,20 @@ export default function ProductDetailPage() {
       </div>
 
       <div className="mx-auto max-w-xl px-4 py-4 space-y-5">
+        {/* 画像スロット */}
+        {product.images && (
+          <section className="space-y-2">
+            <h2 className="text-[11px] font-bold text-zinc-500 px-1">クリエイティブ素材</h2>
+            <div className="bg-white rounded-lg shadow-sm p-3">
+              <ImageSlots
+                images={product.images}
+                onUpload={handleSlotUpload}
+                onDelete={handleSlotDelete}
+              />
+            </div>
+          </section>
+        )}
+
         {/* カウントダウン */}
         {!step5Done && countdown && (
           <div className="flex items-center justify-between bg-white rounded-lg shadow-sm px-3 py-2">
@@ -209,6 +282,8 @@ export default function ProductDetailPage() {
               <AssetsChecklist
                 assets={product.assets}
                 onToggle={toggleAsset}
+                images={product.images}
+                captionText={product.captionText}
               />
             }
           />
@@ -228,6 +303,13 @@ export default function ProductDetailPage() {
 
         {/* アクション */}
         <section className="pt-2 space-y-2">
+          <button
+            type="button"
+            onClick={handleDownloadZip}
+            className="w-full rounded-lg bg-zinc-900 text-white text-xs font-bold py-2 hover:bg-zinc-800"
+          >
+            クリエイティブをダウンロード
+          </button>
           <button
             type="button"
             onClick={handleDuplicate}

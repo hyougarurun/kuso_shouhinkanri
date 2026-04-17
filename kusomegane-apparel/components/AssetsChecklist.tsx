@@ -1,16 +1,16 @@
 "use client"
 
-import { ProductAssets, AssetStatus } from "@/types"
+import { ProductAssets, ProductImages, AssetStatus } from "@/types"
 
 type AssetKey = keyof ProductAssets
 type BooleanAssetKey = "sizeDetailDone" | "captionDone"
 type ThreeStateKey = Exclude<AssetKey, BooleanAssetKey>
 
-const ITEMS: { key: AssetKey; label: string }[] = [
-  { key: "compositeImage", label: "商品画像" },
-  { key: "processingImage", label: "加工箇所アップ画像" },
-  { key: "aiWearingImage", label: "着画（AI生成）" },
-  { key: "sizeDetailDone", label: "サイズ詳細" },
+const ITEMS: { key: AssetKey; label: string; imageKey?: keyof ProductImages }[] = [
+  { key: "compositeImage", label: "商品画像", imageKey: "composite" },
+  { key: "processingImage", label: "加工箇所アップ画像", imageKey: "processing" },
+  { key: "aiWearingImage", label: "着画（AI生成）", imageKey: "wearing" },
+  { key: "sizeDetailDone", label: "サイズ詳細", imageKey: "sizeDetail" },
   { key: "captionDone", label: "商品概要キャプション" },
 ]
 
@@ -24,17 +24,43 @@ function isDone(assets: ProductAssets, k: AssetKey): boolean {
   return status === "done"
 }
 
+function isDoneWithImages(
+  assets: ProductAssets,
+  k: AssetKey,
+  images?: ProductImages,
+  captionText?: string,
+): boolean {
+  // assets の状態と images の状態を OR で判定
+  const assetDone = isDone(assets, k)
+  if (assetDone) return true
+
+  // captionDone は captionText が非空なら done
+  if (k === "captionDone" && captionText) return true
+
+  // images からの自動判定
+  if (images) {
+    const item = ITEMS.find((it) => it.key === k)
+    if (item?.imageKey && images[item.imageKey] !== null) return true
+  }
+
+  return false
+}
+
 export function AssetsChecklist({
   assets,
   onToggle,
+  images,
+  captionText,
 }: {
   assets: ProductAssets
   onToggle: (key: AssetKey) => void
+  images?: ProductImages
+  captionText?: string
 }) {
   return (
     <ul className="space-y-1.5">
       {ITEMS.map((it) => {
-        const done = isDone(assets, it.key)
+        const done = isDoneWithImages(assets, it.key, images, captionText)
         return (
           <li key={it.key}>
             <button

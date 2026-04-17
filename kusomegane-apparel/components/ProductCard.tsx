@@ -7,6 +7,7 @@ import { getProductStatus, getProgress } from "@/lib/productStatus"
 import { getNextActionLabel } from "@/lib/nextAction"
 import { computeSampleCountdown } from "@/lib/sampleCountdown"
 import { getColorStyle } from "@/lib/colorPalette"
+import { CreativeBadge } from "./CreativeBadge"
 
 export function ProductCard({ product }: { product: Product }) {
   const status = getProductStatus(product)
@@ -76,6 +77,7 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="text-[11px] text-zinc-700 pt-0.5 line-clamp-1">
           次: {nextLabel}
         </div>
+        <CreativeBadge product={product} />
         {!step5Done && countdown && (
           <div>
             <SampleCountdownLabel data={countdown} />

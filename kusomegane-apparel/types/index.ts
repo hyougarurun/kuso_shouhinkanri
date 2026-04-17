@@ -34,6 +34,13 @@ export interface ProductAssets {
   captionDone: boolean
 }
 
+export interface ProductImages {
+  composite: string | null
+  processing: string | null
+  wearing: string | null
+  sizeDetail: string | null
+}
+
 export interface OrderQuantities {
   S?: number
   M?: number
@@ -64,6 +71,7 @@ export interface Product {
   sheetRowNumbers: Record<string, number>
   captionText: string
   imagePreview: string | null
+  images?: ProductImages
   currentStep: number
   steps: FlowStep[]
   assets: ProductAssets
