@@ -2,10 +2,11 @@
 
 ## 現在の作業
 - 機能: **加工費推定 PoC**（画像から加工費を自動推定するエンジンの検証）
-- 状態: PoC 設計確定（Q1〜Q14 すべて k2 承認済み）→ **feature/print-cost-poc ブランチ切って P1 着手**
+- 状態: **PoC-P1 完了（2026-04-17）**。feature/print-cost-poc ブランチで 8/8 テスト PASS
 - 次にやること:
-  1. `feature/print-cost-poc` ブランチ作成
-  2. PoC-P1 着手: 請求書パーサー（14 PDF の業者調査 → JSON スキーマ定義 → TDD で実装）
+  1. PoC-P2 着手: 他 13 PDF の一括パース → `data/parsed/*.json` 生成
+  2. PoC-P3: 加工費統計集計（番号付きメガメガ明細のみ）
+  3. 業者調査は別タスク化（issuer が null で返ったため、プロンプト改善 or PDFヘッダ再確認が必要）
 - ブロッカー: なし
 - 進行方針: **直列処理**（Phase 1.1 と PoC の並行作業は避ける。PoC 完了後に Phase 1.1 を再開）
 - 確定事項（2026-04-17 PoC）:
@@ -58,6 +59,8 @@
 - PoC-P9: 精度検証（MAPE < 20% 目標）
 
 ## 直近の完了タスク
+- 2026-04-17 **PoC-P1 完了**: 請求書パーサー実装。全 8 テスト PASS（分類4 + 正規化2 + Claude API実呼び出し2）。2026/01 PDF（合計 952,954円）から メガメガ14-1 front (900円×34枚) を自動抽出確認。Stream API + claude-sonnet-4-6、API 使用量 約 $0.41/PDF
+  - commit: 3bc57c4（正規化層）, e1904c2（parseInvoicePdf 本体）
 - 2026-04-17 加工費推定 PoC 設計完了: Q1〜Q14 確定 → `docs/design-notes/print-cost-estimation.md` 作成（請求書14 PDF カタログ、学習ルール、Phase 分割、ディレクトリ構成）
 - 2026-04-17 Phase 1.1 テスト設計: Supabase クライアント基盤のテストケース6件追加（commit 82df461、PoC 完了まで実装保留）
 - 2026-04-17 Phase 1 調査完了: 既存実装/着画AI/Google API/Supabase の4並列リサーチ → `docs/design-notes/phase1-plan.md` + `docs/design-notes/google-integration-prep.md` + `docs/preparation-checklist.md` 作成
