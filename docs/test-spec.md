@@ -747,6 +747,13 @@
 | TC-POC-P1-001 | `parseInvoicePdf('2026-01.pdf')` の戻り値が `ParsedInvoice` 型の必須フィールドを満たす（sourceFile, totalAmount, lineItems[], parsedAt） | PoC | `src/parser/parseInvoicePdf.ts` | `tests/parser/parseInvoicePdf.test.ts` |
 | TC-POC-P1-002 | 2026/01 PDF のパース結果が fixture と整合（totalAmount=952954、lineItems に `メガメガ 14-1 front` unitPrice=900 quantity=34 が存在） | PoC | 同上 | 同上 |
 
+**テストケース一覧（PoC-P2: バッチ実行基盤）**
+
+| ID | テスト名 | 優先度 | 対象ファイル | テストパス |
+|----|---------|-------|------------|-----------|
+| TC-POC-P2-001 | `saveParsedInvoice` が ParsedInvoice を `{outputDir}/{sourceFile}.json` にインデント付きで書き出し、保存パスを返す | PoC | `src/batch/saveParsedInvoice.ts` | `tests/batch/saveParsedInvoice.test.ts` |
+| TC-POC-P2-002 | `batchParseInvoices` が PDF 配列を順次処理（直列）し、個別エラーは `failures[]` に記録して後続を継続、`successes.length + failures.length === inputs.length` | PoC | `src/batch/batchParseInvoices.ts` | `tests/batch/batchParseInvoices.test.ts` |
+
 **補足**:
 - TC-POC-P1-001〜002 は **Claude API 実呼び出しを含む** ため、`ANTHROPIC_API_KEY` 未設定時は `it.skipIf` でスキップする
 - TC-POC-CLS-001〜004 / TC-POC-NRM-001〜002 は純関数の単体テスト。API キー不要
@@ -765,8 +772,8 @@
 | D. 次のアクション計算 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 3 |
 | E. サンプル到着カウントダウン | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 4 |
 | F. Supabase クライアント基盤（Phase 1.1） | 6 | **4** | 2 | 0 | 0 | 0 | 0 | 6 |
-| G. 加工費推定 PoC（PoC-P1: パーサー/正規化/分類） | 8 | 0 | 0 | 0 | 0 | 0 | 0 | 8 |
-| **合計** | **37** | **19** | **10** | **0** | **0** | **0** | **0** | **37** |
+| G. 加工費推定 PoC（PoC-P1/P2） | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
+| **合計** | **39** | **19** | **10** | **0** | **0** | **0** | **0** | **39** |
 
 > カテゴリ G は `PoC` ラベル（上表の優先度列とは別軸）で管理。CI 必須対象外。
 
@@ -806,3 +813,4 @@ CIで1つでもFAILするとmainブランチへのマージが不可になるテ
 | 2026-04-16 | Claude (k2指示) | KUSOMEGANE アパレル管理ツール Phase 0 のロジック層テストケース 23件を追加（TC-STR-001〜006, TC-PN-001〜004, TC-CAP-001〜006, TC-NXT-001〜003, TC-CDN-001〜004）。P0-CRITICAL 15件指定。テストデータ TD-LS-001/TD-PROD-001〜003 追加 | （このcommitで） |
 | 2026-04-17 | Claude (k2指示) | Phase 1.1 用 カテゴリ F（Supabase クライアント基盤）テストケース 6件追加（TC-SB-001〜006、P0-CRITICAL 4件）。テストデータ TD-SB-001/TD-IMG-001/TD-ENV-001 追加。実 DB 接続は CI 対象外、純関数とモックで完結 | （このcommitで） |
 | 2026-04-17 | Claude (k2指示) | 加工費推定 PoC 用 カテゴリ G（PoC-P1: パーサー/分類/正規化）テストケース 8件追加（TC-POC-CLS-001〜004, TC-POC-NRM-001〜002, TC-POC-P1-001〜002）。`PoC` ラベルで CI 必須対象外。テストデータ TD-POC-FIX-001/TD-POC-RAW-001 追加 | （このcommitで） |
+| 2026-04-17 | Claude (k2指示) | 加工費推定 PoC-P2（バッチ実行基盤）テストケース 2件追加（TC-POC-P2-001 saveParsedInvoice, TC-POC-P2-002 batchParseInvoices）。合計カウントを 39 件に更新 | （このcommitで） |
