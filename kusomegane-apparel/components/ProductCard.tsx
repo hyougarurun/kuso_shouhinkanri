@@ -7,7 +7,6 @@ import { getProductStatus, getProgress } from "@/lib/productStatus"
 import { getNextActionLabel } from "@/lib/nextAction"
 import { computeSampleCountdown } from "@/lib/sampleCountdown"
 import { getColorStyle } from "@/lib/colorPalette"
-import { CreativeBadge } from "./CreativeBadge"
 
 export function ProductCard({ product }: { product: Product }) {
   const status = getProductStatus(product)
@@ -77,7 +76,28 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="text-[11px] text-zinc-700 pt-0.5 line-clamp-1">
           次: {nextLabel}
         </div>
-        <CreativeBadge product={product} />
+        {product.images && (() => {
+          const slots = [
+            { key: "processing" as const, label: "加工" },
+            { key: "wearing" as const, label: "着画" },
+            { key: "sizeDetail" as const, label: "サイズ" },
+          ]
+          const thumbs = slots.filter(({ key }) => product.images?.[key])
+          if (thumbs.length === 0) return null
+          return (
+            <div className="flex gap-1 pt-0.5">
+              {thumbs.map(({ key, label }) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={key}
+                  src={product.images![key]!}
+                  alt={label}
+                  className="w-8 h-8 rounded object-cover border border-zinc-200"
+                />
+              ))}
+            </div>
+          )
+        })()}
         {!step5Done && countdown && (
           <div>
             <SampleCountdownLabel data={countdown} />
