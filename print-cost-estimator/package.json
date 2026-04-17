@@ -1,0 +1,22 @@
+{
+  "name": "print-cost-estimator",
+  "version": "0.0.1",
+  "private": true,
+  "description": "KUSOMEGANE 加工費推定 PoC - 請求書学習・画像ベース推論エンジン",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.89.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@vitest/coverage-v8": "^4.1.4",
+    "typescript": "^5",
+    "vitest": "^4.1.4"
+  }
+}
