@@ -2,12 +2,13 @@
 
 ## 現在の作業
 - 機能: **加工費推定 PoC**（画像から加工費を自動推定するエンジンの検証）
-- 状態: **PoC-P1 完了（2026-04-17）**。feature/print-cost-poc ブランチで 8/8 テスト PASS
+- 状態: **PoC-P1 + P2 完了（2026-04-18）**。14/14 PDF パース成功、feature/print-cost-poc ブランチ 10 コミット GitHub push 済
 - 次にやること:
-  1. PoC-P2 着手: 他 13 PDF の一括パース → `data/parsed/*.json` 生成
-  2. PoC-P3: 加工費統計集計（番号付きメガメガ明細のみ）
-  3. 業者調査は別タスク化（issuer が null で返ったため、プロンプト改善 or PDFヘッダ再確認が必要）
+  1. （推奨）ParsedInvoice 型に `issuer?` / `invoiceNumber?` を optional 追加（30分）
+  2. PoC-P3: 加工費統計集計（番号付きメガメガ明細のみ、別業者 202501/202502 は除外）
+  3. PoC-P4 以降は P3 結果を見て判断
 - ブロッカー: なし
+- リポジトリ: https://github.com/hyougarurun/kuso_shouhinkanri
 - 進行方針: **直列処理**（Phase 1.1 と PoC の並行作業は避ける。PoC 完了後に Phase 1.1 を再開）
 - 確定事項（2026-04-17 PoC）:
   - Q1 開始時期 = B（Phase 1 と並行ブランチ）
@@ -59,6 +60,8 @@
 - PoC-P9: 精度検証（MAPE < 20% 目標）
 
 ## 直近の完了タスク
+- 2026-04-18 **PoC-P2 完了**: 14 PDF 一括パース **14/14 成功**（39分、API コスト 約 $5.8）。合計 1,930 明細、¥17,942,344 分を構造化。業者分類判明（taxAmount=0 の 202501/202502 は別業者、他 12 件はメガメガくん）。レポート: `docs/design-notes/poc-p2-batch-result.md`
+  - commit: 5c1bd9b（バッチ基盤: saveParsedInvoice + batchParseInvoices + CLI）
 - 2026-04-17 **PoC-P1 完了**: 請求書パーサー実装。全 8 テスト PASS（分類4 + 正規化2 + Claude API実呼び出し2）。2026/01 PDF（合計 952,954円）から メガメガ14-1 front (900円×34枚) を自動抽出確認。Stream API + claude-sonnet-4-6、API 使用量 約 $0.41/PDF
   - commit: 3bc57c4（正規化層）, e1904c2（parseInvoicePdf 本体）
 - 2026-04-17 加工費推定 PoC 設計完了: Q1〜Q14 確定 → `docs/design-notes/print-cost-estimation.md` 作成（請求書14 PDF カタログ、学習ルール、Phase 分割、ディレクトリ構成）
@@ -74,6 +77,7 @@
 
 ## 設計メモへのリンク
 - [加工費推定 PoC 設計メモ](design-notes/print-cost-estimation.md) **← 現在アクティブ**
+- [PoC-P2 バッチパース実行結果](design-notes/poc-p2-batch-result.md) **← 最新結果 (2026-04-18)**
 - [KUSOMEGANE アパレル商品管理ツール 設計メモ（Phase 0）](design-notes/kusomegane-apparel.md)
 - [Phase 1 実装計画書](design-notes/phase1-plan.md)
 - [Google API 統合準備](design-notes/google-integration-prep.md)
