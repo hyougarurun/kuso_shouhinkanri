@@ -15,6 +15,9 @@
 | TD-PROD-001 | サンプル Product オブジェクト | ファクトリ関数 | `__tests__/fixtures/product.ts` の `makeProduct(overrides?)` を呼ぶ。戻り値は `types/index.ts` の `Product` 型を満たす最小データ | `product.id` が UUID 文字列で `product.productNumber` が `"59"` | TC-STR-002〜005, TC-CAP-001〜006, TC-NXT-001〜003, TC-CDN-001〜004 |
 | TD-PROD-002 | 58番商品（既存最大値検証用） | ファクトリ関数 | `makeProduct({ productNumber: "58", baseProductNumber: 58 })` | `product.baseProductNumber === 58` | TC-PN-002 |
 | TD-PROD-003 | 枝番商品（カラバリ最大番号検証用） | ファクトリ関数 | `makeProduct({ productNumber: "60-2", baseProductNumber: 60 })` | `product.baseProductNumber === 60` | TC-PN-002 |
+| TD-SB-001 | モック Supabase クライアント | ファクトリ関数 | `__tests__/fixtures/supabaseMock.ts` の `makeSupabaseMock(overrides?)` を呼ぶ。`from()`, `storage.from().createSignedUrl()` 等を `vi.fn()` で差し替え可能なオブジェクトを返す | `client.from()` が `vi.fn()` インスタンス | TC-SB-001〜004 |
+| TD-IMG-001 | サンプル ImageRecord（DB 行想定） | ファクトリ関数 | `__tests__/fixtures/imageRecord.ts` の `makeImageRecord(overrides?)` を呼ぶ。`{ id, product_id, image_type: 'composite', storage_path, bucket: 'product-images', sort_order: 0, is_primary: false }` 形式 | `record.image_type === 'composite'` | TC-SB-005, TC-SB-006 |
+| TD-ENV-001 | 必須環境変数のセット/未セット切替 | テストヘルパ | `vi.stubEnv('SUPABASE_URL', 'https://x.supabase.co')` / `vi.unstubAllEnvs()` | `process.env.SUPABASE_URL` の値が切り替わる | TC-SB-001 |
 
 > **ルール:**
 > - 新しいテストケースを追加する際、必要なテストデータがなければ先にこのテーブルに追加する
@@ -566,6 +569,139 @@
 > 6. `NG例` はテスターが「これはFAILなのか判断に迷う」ケースを具体的に記載する
 > 7. `最終検証日` はこの手順で実際に実行して確認した日付。30日以上経過したケースは再検証を推奨
 >
+### カテゴリ: F. Supabase クライアント基盤（`lib/supabase/*`）
+
+> **モジュール目的:** Phase 1.1 で導入する Supabase クライアントのラッパ層。Service Role Key を持つサーバ専用クライアントの初期化、Storage の signed URL 発行、storage_path 構築、Product ⇔ DB row のシリアライズを担う。
+> **P0-CRITICAL 指定理由:** ここの設定ミス・型ズレは「画像が表示されない」「DBに登録されない」「アップロード後に paths 衝突で上書きされる」など復旧不能な業務影響を起こす。
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-SB-001 |
+| **テスト名** | createServerClient は SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY が未設定なら明示エラーを throw |
+| **優先度** | P0-CRITICAL |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | 環境変数設定ミスに気付かず本番デプロイ → 起動後に Supabase 接続が黙って 401 を返し、画面は空のまま。原因特定に時間がかかる |
+| **カテゴリ** | F. Supabase クライアント基盤 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-ENV-001 |
+| **前提条件** | - `vi.unstubAllEnvs()` で環境変数を初期化済み<br>- `lib/supabase/server.ts` がエクスポートする `createServerClient` 関数が存在 |
+| **UI実機パス** | ユニットテスト。実行: `cd kusomegane-apparel && npm run test -- supabaseServer.test.ts -t "TC-SB-001"` |
+| **手順** | 1. `vi.unstubAllEnvs()` を実行<br>2. `createServerClient()` を呼ぶ<br>3. throw されたエラーをキャッチ |
+| **確認ポイント** | ✅ Error が throw される<br>✅ エラーメッセージに `SUPABASE_URL` または `SUPABASE_SERVICE_ROLE_KEY` という変数名が含まれる<br>✅ `vi.stubEnv` で両方セットしてから再実行すると throw されない |
+| **NG例** | ❌ undefined をそのまま supabase-js に渡して `Invalid URL` のような汎用エラーになる → FAIL（原因特定が困難）<br>❌ 片方未設定でも初期化が成功する → FAIL（事故の温床） |
+| **自動テストパス** | `kusomegane-apparel/__tests__/supabaseServer.test.ts`（`@critical` タグ付き） |
+| **最終検証日** | 2026-04-17 |
+| **結果** | ⬜ 未実装 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-SB-002 |
+| **テスト名** | issueSignedUrl はバケット名・パス・TTL を Supabase SDK に正しく渡し、URL 文字列を返す |
+| **優先度** | P0 |
+| **CI実行対象** | ❌（モックテストのため CI ブロック対象外） |
+| **失敗時の影響** | 画像表示時に signed URL のクエリパラメータが壊れ、画面に画像が出ない |
+| **カテゴリ** | F. Supabase クライアント基盤 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-SB-001 |
+| **前提条件** | - `lib/supabase/signedUrl.ts` の `issueSignedUrl(bucket, path, ttlSec)` 関数が存在<br>- 内部で `supabase.storage.from(bucket).createSignedUrl(path, ttl)` を呼ぶ実装 |
+| **UI実機パス** | ユニットテスト。`npm run test -- signedUrl.test.ts -t "TC-SB-002"` |
+| **手順** | 1. `const mock = makeSupabaseMock({ storage: { signedUrl: 'https://x.supabase.co/storage/v1/object/sign/...' } })`<br>2. `issueSignedUrl(mock, 'product-images', 'products/abc/composite/01.jpg', 600)`<br>3. mock の呼び出し履歴を検証 |
+| **確認ポイント** | ✅ 戻り値が `'https://...'` で始まる文字列<br>✅ `mock.storage.from` が `'product-images'` で1回呼ばれた<br>✅ `createSignedUrl` が `('products/abc/composite/01.jpg', 600)` で呼ばれた |
+| **NG例** | ❌ TTL 引数を秒ではなく分で渡す（600 → 36000 秒になってしまう）→ FAIL<br>❌ バケット名と path を逆に渡す → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/signedUrl.test.ts` |
+| **最終検証日** | 2026-04-17 |
+| **結果** | ⬜ 未実装 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-SB-003 |
+| **テスト名** | issueSignedUrl は Supabase エラー時にユーザー向け日本語メッセージで再 throw する |
+| **優先度** | P0 |
+| **CI実行対象** | ❌ |
+| **失敗時の影響** | エラー時に英語のスタックトレースがそのまま画面に出る |
+| **カテゴリ** | F. Supabase クライアント基盤 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-SB-001 |
+| **前提条件** | - `issueSignedUrl` が Supabase の `{ data, error }` パターンに対応<br>- error.message が `'Object not found'` 等の英語の場合も再 throw する |
+| **UI実機パス** | `npm run test -- signedUrl.test.ts -t "TC-SB-003"` |
+| **手順** | 1. `const mock = makeSupabaseMock({ storage: { error: { message: 'Object not found' } } })`<br>2. `issueSignedUrl(mock, 'product-images', 'no/such/path.jpg', 600)` を呼ぶ<br>3. throw されたエラーをキャッチ |
+| **確認ポイント** | ✅ Error が throw される<br>✅ エラーメッセージに「画像」「URL」「発行」のいずれかの日本語キーワードが含まれる<br>✅ 元の `'Object not found'` も `cause` で参照可能 |
+| **NG例** | ❌ `error.message` を直接 throw して英語のままユーザーに見せる → FAIL<br>❌ throw せず `null` を返す → FAIL（呼び出し側がエラーを見逃す） |
+| **自動テストパス** | `kusomegane-apparel/__tests__/signedUrl.test.ts` |
+| **最終検証日** | 2026-04-17 |
+| **結果** | ⬜ 未実装 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-SB-004 |
+| **テスト名** | buildStoragePath は productId / image_type / 連番から `products/<uuid>/<type>/<index>.<ext>` 形式の一意なパスを返す |
+| **優先度** | **P0-CRITICAL** |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | パス命名がブレると同じパスに別画像が上書きされ、商品Aの画像が商品Bに紛れる。復旧不能 |
+| **カテゴリ** | F. Supabase クライアント基盤 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | なし（純関数） |
+| **前提条件** | - `lib/supabase/storagePath.ts` の `buildStoragePath({ productId, imageType, sortOrder, mimeType })` 関数が存在 |
+| **UI実機パス** | `npm run test -- storagePath.test.ts -t "TC-SB-004"` |
+| **手順** | 1. `buildStoragePath({ productId: 'a1b2c3d4-...', imageType: 'composite', sortOrder: 0, mimeType: 'image/jpeg' })` を呼ぶ |
+| **確認ポイント** | ✅ 戻り値が `products/a1b2c3d4-.../composite/00.jpg`<br>✅ `image/png` を渡すと `.png` 拡張子<br>✅ `image/webp` を渡すと `.webp` 拡張子<br>✅ `sortOrder: 12` を渡すと `12.jpg`（ゼロパディングなしでもよいが順序整合）<br>✅ 異なる `productId` または異なる `sortOrder` のとき必ず異なる文字列になる |
+| **NG例** | ❌ 同じ productId + 同じ imageType + 同じ sortOrder で2回呼んだら別の文字列が返る（=非決定的）→ FAIL<br>❌ `image/heic` のような未対応 MIME を渡したらサイレントに `.bin` で返す → FAIL（`Error('未対応の画像形式')` を throw すべき） |
+| **自動テストパス** | `kusomegane-apparel/__tests__/storagePath.test.ts`（`@critical` タグ付き） |
+| **最終検証日** | 2026-04-17 |
+| **結果** | ⬜ 未実装 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-SB-005 |
+| **テスト名** | serializeProduct は Product 型を DB 行（snake_case + 配列保持）に正しく変換する |
+| **優先度** | **P0-CRITICAL** |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | DB INSERT 時にカラム名ミスマッチで NULL が入り、商品が壊れた状態で保存される |
+| **カテゴリ** | F. Supabase クライアント基盤 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | TD-PROD-001 |
+| **前提条件** | - `lib/supabase/serialize.ts` の `serializeProduct(product: Product): ProductRow` 関数が存在<br>- `ProductRow` 型は migration `0001_init.sql` の `products` テーブル定義と一致 |
+| **UI実機パス** | `npm run test -- serialize.test.ts -t "TC-SB-005"` |
+| **手順** | 1. `const p = makeProduct({ productNumber: '59', baseProductNumber: 59, colors: ['黒','白'], sizes: ['M','L'], orderQuantities: { M: 3, L: 5 } })`<br>2. `const row = serializeProduct(p)` を呼ぶ |
+| **確認ポイント** | ✅ `row.product_number === '59'`<br>✅ `row.base_product_number === 59`（型は number）<br>✅ `row.colors` が `['黒','白']` の配列のまま（JSON 文字列化されていない）<br>✅ `row.order_quantities` が `{ M: 3, L: 5 }` のオブジェクトのまま（jsonb 想定）<br>✅ camelCase の `productType` → snake_case の `product_type` に変換 |
+| **NG例** | ❌ `row.colors` が `'["黒","白"]'` のような JSON 文字列になっている → FAIL（Postgres `text[]` 型に入らない）<br>❌ 未定義のフィールドを `null` ではなく `undefined` で返す → FAIL（supabase-js が無視してしまうため明示 null が必要） |
+| **自動テストパス** | `kusomegane-apparel/__tests__/serialize.test.ts`（`@critical` タグ付き） |
+| **最終検証日** | 2026-04-17 |
+| **結果** | ⬜ 未実装 |
+
+---
+
+| 項目 | 内容 |
+|------|------|
+| **テストケースID** | TC-SB-006 |
+| **テスト名** | parseProduct は DB 行（snake_case）を Product 型（camelCase）に正しく変換し、欠損カラムは型のデフォルト値で埋める |
+| **優先度** | **P0-CRITICAL** |
+| **CI実行対象** | ✅ critical-tests.yml |
+| **失敗時の影響** | DB から取り出したデータの型が崩れ、UI が undefined を参照してクラッシュ |
+| **カテゴリ** | F. Supabase クライアント基盤 |
+| **所要時間目安** | < 1秒 |
+| **テストデータ要件** | なし（最小行を inline で生成） |
+| **前提条件** | - `lib/supabase/serialize.ts` の `parseProduct(row: ProductRow): Product` 関数が存在 |
+| **UI実機パス** | `npm run test -- serialize.test.ts -t "TC-SB-006"` |
+| **手順** | 1. `const row = { id: 'uuid-1', product_number: '60', base_product_number: 60, name: 'パーカー', colors: ['黒'], sizes: ['M'], order_quantities: {}, current_step: 1, ...必須カラム }` を inline 生成<br>2. `const product = parseProduct(row)` を呼ぶ |
+| **確認ポイント** | ✅ `product.id === 'uuid-1'`<br>✅ `product.productNumber === '60'`（camelCase 変換）<br>✅ `product.colors` が `['黒']` のまま<br>✅ `product.orderQuantities` が `{}`（空オブジェクト）<br>✅ `serializeProduct(parseProduct(row))` がほぼ元の row と等しい（往復可逆性） |
+| **NG例** | ❌ `product.productNumber` が undefined → FAIL（snake→camel 変換漏れ）<br>❌ jsonb カラムを誤って JSON.parse して二重デコード → FAIL |
+| **自動テストパス** | `kusomegane-apparel/__tests__/serialize.test.ts`（`@critical` タグ付き） |
+| **最終検証日** | 2026-04-17 |
+| **結果** | ⬜ 未実装 |
+
+---
+
 > **判定基準:**
 > - PASS: 確認ポイントが全て満たされている
 > - FAIL: 確認ポイントのいずれかが満たされていない
@@ -598,7 +734,8 @@
 | C. キャプション組み立て | 6 | **6** | 0 | 0 | 0 | 0 | 0 | 6 |
 | D. 次のアクション計算 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 3 |
 | E. サンプル到着カウントダウン | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 4 |
-| **合計** | **23** | **15** | **8** | **0** | **0** | **0** | **0** | **23** |
+| F. Supabase クライアント基盤（Phase 1.1） | 6 | **4** | 2 | 0 | 0 | 0 | 0 | 6 |
+| **合計** | **29** | **19** | **10** | **0** | **0** | **0** | **0** | **29** |
 
 ### P0-CRITICAL テスト一覧（本番マージブロック対象）
 
@@ -621,6 +758,10 @@ CIで1つでもFAILするとmainブランチへのマージが不可になるテ
 | TC-CAP-004 | 加工種別に「刺繍」を含むと注記が追加される | C. キャプション | 同上 |
 | TC-CAP-005 | 受注生産ON のとき【注意事項】ブロックが末尾に追加される | C. キャプション | 同上 |
 | TC-CAP-006 | 受注生産OFF のとき【注意事項】ブロックが出ない | C. キャプション | 同上 |
+| TC-SB-001 | createServerClient は SUPABASE_URL / SERVICE_ROLE_KEY 未設定で明示エラー | F. Supabase 基盤 | `kusomegane-apparel/__tests__/supabaseServer.test.ts` |
+| TC-SB-004 | buildStoragePath が一意なパスを返す（衝突防止） | F. Supabase 基盤 | `kusomegane-apparel/__tests__/storagePath.test.ts` |
+| TC-SB-005 | serializeProduct が DB 行へ正しく変換 | F. Supabase 基盤 | `kusomegane-apparel/__tests__/serialize.test.ts` |
+| TC-SB-006 | parseProduct が DB 行を Product 型へ正しく変換 | F. Supabase 基盤 | 同上 |
 
 ---
 
@@ -630,3 +771,4 @@ CIで1つでもFAILするとmainブランチへのマージが不可になるテ
 |------|-------|---------|-----------|
 | 2026-04-10 | - | テスト仕様書テンプレート作成 | 初期作成 |
 | 2026-04-16 | Claude (k2指示) | KUSOMEGANE アパレル管理ツール Phase 0 のロジック層テストケース 23件を追加（TC-STR-001〜006, TC-PN-001〜004, TC-CAP-001〜006, TC-NXT-001〜003, TC-CDN-001〜004）。P0-CRITICAL 15件指定。テストデータ TD-LS-001/TD-PROD-001〜003 追加 | （このcommitで） |
+| 2026-04-17 | Claude (k2指示) | Phase 1.1 用 カテゴリ F（Supabase クライアント基盤）テストケース 6件追加（TC-SB-001〜006、P0-CRITICAL 4件）。テストデータ TD-SB-001/TD-IMG-001/TD-ENV-001 追加。実 DB 接続は CI 対象外、純関数とモックで完結 | （このcommitで） |
