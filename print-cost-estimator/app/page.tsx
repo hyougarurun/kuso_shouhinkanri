@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import type { FormEvent } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
 import type {
   EstimationResult,
+  ImageAnalysisResult,
   NormalizedLocation,
   NormalizedMethod,
 } from '@/src/types';
@@ -39,10 +40,13 @@ export default function Page() {
   const [color, setColor] = useState('ホワイト');
   const [selected, setSelected] = useState<SelectedLocation[]>([
     { location: 'front', method: 'ink_print' },
-    { location: 'back', method: 'ink_print' },
   ]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<ImageAnalysisResult | null>(null);
   const [result, setResult] = useState<EstimationResult | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +62,42 @@ export default function Page() {
     setSelected((prev) => [...prev, { location: 'front', method: '' }]);
   const removeLocation = (i: number) =>
     setSelected((prev) => prev.filter((_, idx) => idx !== i));
+
+  const onImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setImageFile(file);
+    setAnalysis(null);
+    setResult(null);
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(file ? URL.createObjectURL(file) : null);
+  };
+
+  const onAnalyze = async () => {
+    if (!imageFile) return;
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append('image', imageFile);
+      const res = await fetch('/api/analyze-image', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      const a = data.analysis as ImageAnalysisResult;
+      setAnalysis(a);
+      if (a.locations.length > 0) {
+        setSelected(
+          a.locations.map((loc) => ({
+            location: loc.location,
+            method: loc.method,
+          })),
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -77,9 +117,7 @@ export default function Page() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? `HTTP ${res.status}`);
-      }
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
       setResult(data.result as EstimationResult);
       setMeta(data.meta as Meta);
     } catch (err) {
@@ -90,16 +128,85 @@ export default function Page() {
   };
 
   return (
-    <main style={{ maxWidth: 860, margin: '40px auto', padding: '0 20px' }}>
+    <main style={{ maxWidth: 900, margin: '40px auto', padding: '0 20px' }}>
       <h1>KUSOMEGANE 加工費推定 PoC</h1>
       <p style={{ color: '#555' }}>
-        請求書 14 件・明細約 1,900 件を元にした推定エンジン（画像なしルールベース版）
+        請求書 14 件・明細約 1,900 件を元にした推定エンジン（画像アップロード対応版）
       </p>
+
+      <section
+        style={{
+          marginTop: 30,
+          padding: 20,
+          background: '#fff',
+          border: '1px solid #e5e5e5',
+          borderRadius: 8,
+        }}
+      >
+        <h2 style={{ marginTop: 0 }}>① 合成商品画像（任意）</h2>
+        <p style={{ color: '#666', fontSize: 14, marginTop: 0 }}>
+          画像をアップロードすると Claude Vision が加工箇所・方法を自動判定して
+          下のフォームに反映します。
+        </p>
+        <input type="file" accept="image/*" onChange={onImageChange} />
+        {imagePreview && (
+          <div style={{ marginTop: 16, display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+            <img
+              src={imagePreview}
+              alt="アップロードされた画像"
+              style={{ maxWidth: 240, border: '1px solid #ccc', borderRadius: 6 }}
+            />
+            <div style={{ flex: 1 }}>
+              <button
+                type="button"
+                onClick={onAnalyze}
+                disabled={analyzing || !imageFile}
+                style={{
+                  padding: '10px 16px',
+                  background: '#2563eb',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 4,
+                }}
+              >
+                {analyzing ? '解析中…' : 'この画像を解析する'}
+              </button>
+              {analysis && (
+                <div style={{ marginTop: 12, fontSize: 14 }}>
+                  <p>
+                    <strong>ボディ観察:</strong> {analysis.bodyObservation || '（記載なし）'}
+                    <br />
+                    <strong>信頼度:</strong> {analysis.confidence}
+                  </p>
+                  {analysis.locations.length === 0 ? (
+                    <p style={{ color: '#b91c1c' }}>
+                      加工箇所が検出されませんでした。手動で追加してください。
+                    </p>
+                  ) : (
+                    <ul style={{ paddingLeft: 20 }}>
+                      {analysis.locations.map((loc, i) => (
+                        <li key={i}>
+                          <strong>
+                            {loc.location} / {loc.method}
+                          </strong>
+                          （サイズ: {loc.sizeHint}）
+                          <br />
+                          <span style={{ color: '#666' }}>{loc.description}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
 
       <form
         onSubmit={onSubmit}
         style={{
-          marginTop: 30,
+          marginTop: 20,
           display: 'grid',
           gap: 16,
           padding: 20,
@@ -108,6 +215,8 @@ export default function Page() {
           borderRadius: 8,
         }}
       >
+        <h2 style={{ marginTop: 0 }}>② ボディと加工箇所</h2>
+
         <div>
           <label>ボディ型番</label>
           <input
@@ -132,7 +241,7 @@ export default function Page() {
         </div>
 
         <div>
-          <label>加工箇所（複数可）</label>
+          <label>加工箇所（複数可 / 画像解析で自動反映 / 手動編集可）</label>
           <div style={{ display: 'grid', gap: 8, marginTop: 4 }}>
             {selected.map((s, i) => (
               <div key={i} style={{ display: 'flex', gap: 8 }}>
@@ -190,9 +299,7 @@ export default function Page() {
         </button>
       </form>
 
-      {error && (
-        <p style={{ marginTop: 20, color: '#b91c1c' }}>エラー: {error}</p>
-      )}
+      {error && <p style={{ marginTop: 20, color: '#b91c1c' }}>エラー: {error}</p>}
 
       {meta && (
         <p style={{ marginTop: 20, color: '#666', fontSize: 14 }}>

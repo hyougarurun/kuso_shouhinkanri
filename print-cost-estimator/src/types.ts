@@ -92,6 +92,21 @@ export type EstimationInput = {
   locations: NormalizedLocation[];
 };
 
+/** 画像解析結果の 1 箇所分（PoC-C1） */
+export type ImageAnalysisLocation = {
+  location: NormalizedLocation;
+  method: NormalizedMethod;
+  sizeHint: 'small' | 'medium' | 'large';
+  description: string;
+};
+
+/** 画像解析結果全体（PoC-C1: Claude Vision の出力） */
+export type ImageAnalysisResult = {
+  locations: ImageAnalysisLocation[];
+  bodyObservation: string;
+  confidence: 'high' | 'medium' | 'low';
+};
+
 /** 推論出力（§8.3） */
 export type EstimationResult = {
   bodyPrice: {
