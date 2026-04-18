@@ -163,6 +163,16 @@ function main(): void {
   console.log(
     `  加工費小計${' '.repeat(35)}: ¥${result.subtotalProcessing.toLocaleString()}`,
   );
+
+  if (result.totalMin !== undefined && result.totalMax !== undefined) {
+    console.log('');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(
+      `  商品単価合計（ボディ + 加工費）: ¥${result.totalMin.toLocaleString()} 〜 ¥${result.totalMax.toLocaleString()}`,
+    );
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  }
+
   console.log('');
   for (const n of result.notes) console.log(`※ ${n}`);
 }

@@ -70,6 +70,8 @@ describe('estimate', () => {
     expect(result.bodyPrice.bodyCode).toBe('5001-01');
     expect(result.bodyPrice.color).toBe('ホワイト');
     expect(result.bodyPrice.range).toBe('633〜955');
+    expect(result.bodyPrice.minPrice).toBe(633);
+    expect(result.bodyPrice.maxPrice).toBe(955);
 
     expect(result.processing).toHaveLength(2);
 
@@ -88,6 +90,9 @@ describe('estimate', () => {
     expect(back.confidence).toBe('high');
 
     expect(result.subtotalProcessing).toBe(700 + 1100);
+    // ボディ単価 + 加工費小計のレンジ
+    expect(result.totalMin).toBe(633 + 1800);
+    expect(result.totalMax).toBe(955 + 1800);
   });
 
   it('TC-POC-P6-002: 未知 bodyCode は range=不明、未知 location は estimatedPrice=0 confidence=low basedOn=0、例外にならない', () => {
@@ -101,6 +106,8 @@ describe('estimate', () => {
 
     expect(result.bodyPrice.range).toBe('不明');
     expect(result.bodyPrice.bodyCode).toBe('9999-99');
+    expect(result.bodyPrice.minPrice).toBeUndefined();
+    expect(result.bodyPrice.maxPrice).toBeUndefined();
 
     expect(result.processing).toHaveLength(1);
     expect(result.processing[0].estimatedPrice).toBe(0);
@@ -108,6 +115,8 @@ describe('estimate', () => {
     expect(result.processing[0].basedOn).toBe(0);
 
     expect(result.subtotalProcessing).toBe(0);
+    expect(result.totalMin).toBeUndefined();
+    expect(result.totalMax).toBeUndefined();
     expect(result.notes.length).toBeGreaterThan(0);
   });
 });

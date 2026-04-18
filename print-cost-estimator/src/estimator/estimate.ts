@@ -53,6 +53,8 @@ export function estimate(
         range: `${bpr.minPrice}〜${bpr.maxPrice}`,
         bodyCode: bpr.bodyCode,
         color: bpr.color,
+        minPrice: bpr.minPrice,
+        maxPrice: bpr.maxPrice,
       }
     : {
         range: '不明',
@@ -115,6 +117,9 @@ export function estimate(
     0,
   );
 
+  const totalMin = bpr ? bpr.minPrice + subtotalProcessing : undefined;
+  const totalMax = bpr ? bpr.maxPrice + subtotalProcessing : undefined;
+
   const notes: string[] = ['副資材（OPP・タグ）と送料は別途'];
   if (!bpr) notes.push(`ボディ型番 ${req.bodyCode} の単価データなし`);
 
@@ -122,6 +127,8 @@ export function estimate(
     bodyPrice,
     processing,
     subtotalProcessing,
+    totalMin,
+    totalMax,
     notes,
   };
 }

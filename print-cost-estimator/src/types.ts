@@ -113,6 +113,8 @@ export type EstimationResult = {
     range: string;
     bodyCode: string;
     color?: string;
+    minPrice?: number;
+    maxPrice?: number;
   };
   processing: {
     location: NormalizedLocation;
@@ -122,5 +124,9 @@ export type EstimationResult = {
     basedOn: number;
   }[];
   subtotalProcessing: number;
+  /** ボディ最低単価 + 加工費小計（bodyPrice.minPrice が無ければ undefined） */
+  totalMin?: number;
+  /** ボディ最高単価 + 加工費小計（bodyPrice.maxPrice が無ければ undefined） */
+  totalMax?: number;
   notes: string[];
 };

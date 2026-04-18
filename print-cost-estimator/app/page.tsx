@@ -365,6 +365,50 @@ export default function Page() {
             </tfoot>
           </table>
 
+          {result.totalMin !== undefined && result.totalMax !== undefined ? (
+            <div
+              style={{
+                marginTop: 20,
+                padding: 16,
+                background: '#f0f9ff',
+                border: '2px solid #0284c7',
+                borderRadius: 8,
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: 13, color: '#0369a1', marginBottom: 4 }}>
+                商品単価合計（ボディ + 加工費 / 1枚あたり）
+              </div>
+              <div
+                style={{ fontSize: 28, fontWeight: 'bold', color: '#0c4a6e' }}
+              >
+                ¥{result.totalMin.toLocaleString()} 〜 ¥
+                {result.totalMax.toLocaleString()}
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>
+                ※ サイズにより変動（ボディ ¥
+                {result.bodyPrice.minPrice?.toLocaleString()}〜¥
+                {result.bodyPrice.maxPrice?.toLocaleString()} + 加工費 ¥
+                {result.subtotalProcessing.toLocaleString()}）
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                marginTop: 20,
+                padding: 12,
+                background: '#fff7ed',
+                border: '1px solid #fb923c',
+                borderRadius: 8,
+                fontSize: 14,
+                color: '#9a3412',
+              }}
+            >
+              ボディ単価データが無いため、商品単価合計は算出できません。
+              加工費のみ: ¥{result.subtotalProcessing.toLocaleString()}
+            </div>
+          )}
+
           {result.notes.length > 0 && (
             <ul style={{ marginTop: 16, color: '#666', fontSize: 14 }}>
               {result.notes.map((n, i) => (
