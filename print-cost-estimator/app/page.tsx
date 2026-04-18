@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type {
   EstimationResult,
   ImageAnalysisResult,
@@ -35,12 +36,53 @@ type Meta = {
   bodyCodes: number;
 };
 
-export default function Page() {
-  const [bodyCode, setBodyCode] = useState('5001-01');
-  const [color, setColor] = useState('ホワイト');
-  const [selected, setSelected] = useState<SelectedLocation[]>([
-    { location: 'front', method: 'ink_print' },
-  ]);
+const VALID_LOCATIONS: readonly NormalizedLocation[] = [
+  'front',
+  'back',
+  'sleeve',
+  'both_sleeves',
+  'three_locations',
+  'sleeve_patch',
+];
+
+const VALID_METHODS: readonly NormalizedMethod[] = [
+  'ink_print',
+  'embroidery',
+  'patch',
+  'sagara_attach',
+];
+
+function parseLocationsParam(
+  locs: string | null,
+  methods: string | null,
+): SelectedLocation[] {
+  if (!locs) return [{ location: 'front', method: 'ink_print' }];
+  const locArr = locs.split(',').map((s) => s.trim()).filter(Boolean);
+  const methArr = methods ? methods.split(',').map((s) => s.trim()) : [];
+  const pairs = locArr.flatMap<SelectedLocation>((loc, i) => {
+    if (!VALID_LOCATIONS.includes(loc as NormalizedLocation)) return [];
+    const methCandidate = methArr[i];
+    const method =
+      methCandidate && VALID_METHODS.includes(methCandidate as NormalizedMethod)
+        ? (methCandidate as NormalizedMethod)
+        : '';
+    return [{ location: loc as NormalizedLocation, method }];
+  });
+  return pairs.length > 0 ? pairs : [{ location: 'front', method: 'ink_print' }];
+}
+
+function PageInner() {
+  const searchParams = useSearchParams();
+  const paramBodyCode = searchParams.get('bodyCode');
+  const paramColor = searchParams.get('color');
+  const paramLocations = searchParams.get('locations');
+  const paramMethods = searchParams.get('methods');
+
+  const [bodyCode, setBodyCode] = useState(paramBodyCode ?? '5001-01');
+  const [color, setColor] = useState(paramColor ?? 'ホワイト');
+  const [selected, setSelected] = useState<SelectedLocation[]>(
+    parseLocationsParam(paramLocations, paramMethods),
+  );
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<ImageAnalysisResult | null>(null);
@@ -419,5 +461,13 @@ export default function Page() {
         </section>
       )}
     </main>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<main style={{ padding: 40 }}>読み込み中…</main>}>
+      <PageInner />
+    </Suspense>
   );
 }
