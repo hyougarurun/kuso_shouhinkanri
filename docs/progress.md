@@ -2,13 +2,18 @@
 
 ## 現在の作業
 - 機能: **加工費推定 PoC**（画像から加工費を自動推定するエンジンの検証）
-- 状態: **PoC-P1 + P2 完了（2026-04-18）**。14/14 PDF パース成功、feature/print-cost-poc ブランチ 10 コミット GitHub push 済
+- 状態: **PoC-A/B/C1 完了（2026-04-18）**。CLI + Web UI + 画像アップロード解析まで実装。feature/print-cost-poc ブランチ 14 コミット GitHub push 済、動作確認待ち
 - 次にやること:
-  1. （推奨）ParsedInvoice 型に `issuer?` / `invoiceNumber?` を optional 追加（30分）
-  2. PoC-P3: 加工費統計集計（番号付きメガメガ明細のみ、別業者 202501/202502 は除外）
-  3. PoC-P4 以降は P3 結果を見て判断
-- ブロッカー: なし
+  1. **k2 による動作確認**（`npm run dev -- -p 3101` → 実商品画像アップロードで精度チェック）
+  2. 精度問題があれば プロンプト調整 or P7（類似画像検索）着手
+  3. 精度 OK なら D（kusomegane-apparel 本体統合）
+- ブロッカー: なし（k2 確認待ち）
 - リポジトリ: https://github.com/hyougarurun/kuso_shouhinkanri
+- **保留タスク**:
+  - 業者調査（issuer null）: PoC-P3 以降で対応
+  - ParsedInvoice 型に issuer/invoiceNumber 追加: P3 以降で対応
+  - P7 類似画像検索（OpenCLIP）: C-1 の精度評価後に判断
+  - Phase 1（本体 Supabase 基盤）: PoC 完了後に再開
 - 進行方針: **直列処理**（Phase 1.1 と PoC の並行作業は避ける。PoC 完了後に Phase 1.1 を再開）
 - 確定事項（2026-04-17 PoC）:
   - Q1 開始時期 = B（Phase 1 と並行ブランチ）
@@ -60,6 +65,12 @@
 - PoC-P9: 精度検証（MAPE < 20% 目標）
 
 ## 直近の完了タスク
+- 2026-04-18 **PoC-C1 完了**: 画像アップロード → Claude Vision で加工箇所自動判定。`/api/analyze-image` + 画像アップロード UI 実装。kusomegane-char.png でテスト時、アパレル判定のgraceful fallbackを確認
+  - commit: c72655f（src/vision/analyzeImage.ts, app/api/analyze-image/route.ts, app/page.tsx更新）
+- 2026-04-18 **PoC-B 完了**: Next.js 16 最小 Web UI（port 3101）。`/api/estimate` Route + 推定フォーム + 結果テーブル。API 実呼び出しで 5001-01 ホワイト → ¥1,900 推定成功
+  - commit: 32b3982
+- 2026-04-18 **PoC-A 完了**: 統計集計（P3/P4）+ 推論エンジン（P6）+ CLI 実装。全 7 件 TDD PASS。`npm run estimate -- --bodyCode 5001-01 --locations front,back` で CLI 動作確認
+  - commit: f389ead, bd7f7b6
 - 2026-04-18 **PoC-P2 完了**: 14 PDF 一括パース **14/14 成功**（39分、API コスト 約 $5.8）。合計 1,930 明細、¥17,942,344 分を構造化。業者分類判明（taxAmount=0 の 202501/202502 は別業者、他 12 件はメガメガくん）。レポート: `docs/design-notes/poc-p2-batch-result.md`
   - commit: 5c1bd9b（バッチ基盤: saveParsedInvoice + batchParseInvoices + CLI）
 - 2026-04-17 **PoC-P1 完了**: 請求書パーサー実装。全 8 テスト PASS（分類4 + 正規化2 + Claude API実呼び出し2）。2026/01 PDF（合計 952,954円）から メガメガ14-1 front (900円×34枚) を自動抽出確認。Stream API + claude-sonnet-4-6、API 使用量 約 $0.41/PDF
