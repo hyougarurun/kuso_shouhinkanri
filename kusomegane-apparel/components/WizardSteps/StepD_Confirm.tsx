@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import { WizardBasic, WizardState } from "@/lib/wizardState"
+import type { EstimationResult } from "@/lib/print-cost/types"
 
 const PRINT_COST_ESTIMATOR_URL =
   process.env.NEXT_PUBLIC_PRINT_COST_ESTIMATOR_URL ?? "http://localhost:3101"
@@ -36,6 +38,43 @@ export function StepD_Confirm({
   onSave: () => void
 }) {
   const { basic, image, caption } = state
+  const [estimate, setEstimate] = useState<EstimationResult | null>(null)
+  const [estimateMeta, setEstimateMeta] = useState<{
+    invoices: number
+    lineItems: number
+  } | null>(null)
+  const [estimating, setEstimating] = useState(false)
+  const [estimateError, setEstimateError] = useState<string | null>(null)
+
+  async function fetchEstimate() {
+    setEstimating(true)
+    setEstimateError(null)
+    try {
+      const res = await fetch("/api/estimate-cost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bodyCode: basic.bodyModelNumber,
+          color: basic.colors[0] || undefined,
+          locations: [
+            {
+              location: "front",
+              method: mapMethodFromProcessingType(basic.processingType),
+            },
+          ],
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
+      setEstimate(data.result as EstimationResult)
+      setEstimateMeta(data.meta)
+    } catch (e) {
+      setEstimateError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setEstimating(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -117,19 +156,89 @@ export function StepD_Confirm({
           <div className="font-bold mb-1">加工費推定（PoC）</div>
           <p className="text-zinc-600 mb-2">
             過去請求書（14 件・明細 約 1,900 件）を学習した推定エンジンで、
-            この商品の加工費レンジを確認できます（別タブで開きます）。
+            この商品の加工費レンジを取得します。
           </p>
-          <a
-            href={buildEstimateUrl(basic)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block rounded bg-sky-600 text-white text-[11px] font-bold px-3 py-1.5"
-          >
-            加工費推定を開く →
-          </a>
-          <p className="text-zinc-500 mt-2 text-[10px]">
-            別ターミナルで <code>cd print-cost-estimator && npm run dev -- -p 3101</code> を起動している必要があります
-          </p>
+
+          <div className="flex gap-2 mb-2">
+            <button
+              type="button"
+              onClick={fetchEstimate}
+              disabled={estimating}
+              className="rounded bg-sky-600 text-white text-[11px] font-bold px-3 py-1.5 disabled:opacity-50"
+            >
+              {estimating ? "推定中…" : "加工費を推定する"}
+            </button>
+            <a
+              href={buildEstimateUrl(basic)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded border border-sky-600 text-sky-700 text-[11px] font-bold px-3 py-1.5"
+            >
+              詳細ツールを開く →
+            </a>
+          </div>
+
+          {estimateError && (
+            <p className="text-red-600 mt-2">エラー: {estimateError}</p>
+          )}
+
+          {estimate && (
+            <div className="bg-white rounded border border-sky-200 p-2 mt-2 space-y-1">
+              <div className="font-bold text-zinc-900">推定結果</div>
+              <div>
+                <span className="text-zinc-500">ボディ単価レンジ: </span>
+                ¥{estimate.bodyPrice.range}
+              </div>
+              <div className="border-t border-zinc-100 pt-1">
+                <div className="text-zinc-500 mb-1">加工費内訳</div>
+                {estimate.processing.map((p, i) => (
+                  <div key={i} className="flex justify-between">
+                    <span>
+                      {p.location} / {p.method}
+                    </span>
+                    <span>
+                      ¥{p.estimatedPrice.toLocaleString()}{" "}
+                      <span className="text-zinc-400 text-[10px]">
+                        ({p.confidence} / {p.basedOn}件)
+                      </span>
+                    </span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-bold border-t border-zinc-100 mt-1 pt-1">
+                  <span>加工費小計</span>
+                  <span>¥{estimate.subtotalProcessing.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {estimate.totalMin !== undefined &&
+                estimate.totalMax !== undefined && (
+                  <div className="bg-sky-100 border border-sky-300 rounded p-2 text-center mt-2">
+                    <div className="text-[10px] text-sky-700">
+                      商品単価合計（ボディ + 加工費 / 1枚あたり）
+                    </div>
+                    <div className="text-[16px] font-bold text-sky-900">
+                      ¥{estimate.totalMin.toLocaleString()} 〜 ¥
+                      {estimate.totalMax.toLocaleString()}
+                    </div>
+                  </div>
+                )}
+
+              {estimate.notes.length > 0 && (
+                <ul className="text-zinc-500 text-[10px] mt-1 list-disc pl-4">
+                  {estimate.notes.map((n, i) => (
+                    <li key={i}>{n}</li>
+                  ))}
+                </ul>
+              )}
+
+              {estimateMeta && (
+                <div className="text-zinc-400 text-[10px] mt-1 border-t border-zinc-100 pt-1">
+                  学習データ: {estimateMeta.invoices} 請求書 /{" "}
+                  {estimateMeta.lineItems.toLocaleString()} 明細
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
