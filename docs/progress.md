@@ -1,19 +1,47 @@
 # 作業進捗
 
 ## 現在の作業
-- 機能: **加工費推定 PoC**（画像から加工費を自動推定するエンジンの検証）
-- 状態: **PoC-A/B/C1 完了（2026-04-18）**。CLI + Web UI + 画像アップロード解析まで実装。feature/print-cost-poc ブランチ 14 コミット GitHub push 済、動作確認待ち
-- 次にやること:
-  1. **k2 による動作確認**（`npm run dev -- -p 3101` → 実商品画像アップロードで精度チェック）
-  2. 精度問題があれば プロンプト調整 or P7（類似画像検索）着手
-  3. 精度 OK なら D（kusomegane-apparel 本体統合）
-- ブロッカー: なし（k2 確認待ち）
+- 機能: **PC UI フルリニューアル 設計フェーズ**（加工費推定 PoC は A〜D2 完了済）
+- 状態: **設計メモまで完了、実装未着手**。k2 が Claude Design で具体化を試したが、Claude Design が **ローカルの設計メモファイルを読めず混乱**。方針再調整中
 - リポジトリ: https://github.com/hyougarurun/kuso_shouhinkanri
-- **保留タスク**:
-  - 業者調査（issuer null）: PoC-P3 以降で対応
-  - ParsedInvoice 型に issuer/invoiceNumber 追加: P3 以降で対応
-  - P7 類似画像検索（OpenCLIP）: C-1 の精度評価後に判断
-  - Phase 1（本体 Supabase 基盤）: PoC 完了後に再開
+- ブランチ: `feature/print-cost-poc`（最新 commit: 16e50d5）
+
+### 🔥 次セッション開始時に k2 に提示すべき選択肢
+1. **A: Claude Design を再トライ**
+   - 設計メモ§7 のプロンプトを claude.ai/Claude Design の**チャット欄に直接コピペ**（ローカルパス参照ではテキストが読めない）
+   - 参照 URL: https://github.com/hyougarurun/kuso_shouhinkanri/blob/feature/print-cost-poc/docs/design-notes/pc-ui-renewal.md
+2. **B: 設計メモを Claude Design にファイルアップロード**
+   - .md を Claude Design 画面へドラッグ&ドロップ
+3. **C: Claude Design 使わず Claude Code（私）が直接実装**（Phase P1〜P8、約 14h）
+   - 設計メモは私が作ったので齟齬なし
+   - 最速で成果物が出る
+
+### 📋 設計メモに記載済みの確定要件（2026-04-18 k2「推奨で」指示）
+| Q | 決定 |
+|---|---|
+| Q1 ホームレイアウト | 左右 2 カード（商品管理 flex-2 / 加工費推定 flex-1） |
+| Q2 登録フロー | 3 ステップ: 加工費推測 → 登録情報 → 登録完了 |
+| Q3 BOX 表記 | 各ステップを 1 つの大 BOX |
+| Q4 横幅 | 最大 1440px |
+| Q5 ナビ | 左サイドバー 220px 固定 |
+| Q6 Claude Design | 私がテキスト仕様 → k2 が Claude Design で具体化 → 私が実装 |
+
+### 🛠 実装 Phase（設計メモ §8）
+- P1: サイドバー + レイアウト基盤（1h）
+- P2: ホーム画面 2 分割（2h）
+- P3: 新規登録ウィザード 3 ステップ化（3h）
+- P4: Step 1 加工費推測（2h）
+- P5: Step 2 登録情報入力（2h）
+- P6: Step 3 登録完了（1h）
+- P7: 商品詳細 PC 版（2h）
+- P8: 微調整・commit/push（1h）
+- 合計 **約 14h**
+
+### 保留タスク（PoC 精度改善系、優先度低）
+- 業者調査（issuer null）
+- ParsedInvoice 型に issuer/invoiceNumber 追加
+- P7 類似画像検索（OpenCLIP）
+- Phase 1（本体 Supabase 基盤、当初計画）
 - 進行方針: **直列処理**（Phase 1.1 と PoC の並行作業は避ける。PoC 完了後に Phase 1.1 を再開）
 - 確定事項（2026-04-17 PoC）:
   - Q1 開始時期 = B（Phase 1 と並行ブランチ）
