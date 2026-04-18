@@ -5,6 +5,10 @@ coverage/
 .env.*
 !.env.example
 
+# Next.js
+.next/
+tsconfig.tsbuildinfo
+
 # PoC 学習データ（サイズ大、機密情報含む可能性あり）
 data/raw/
 data/parsed/

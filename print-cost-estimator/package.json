@@ -10,13 +10,21 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "parse:batch": "tsx src/batch/cli.ts",
-    "estimate": "tsx src/cli/estimate.ts"
+    "estimate": "tsx src/cli/estimate.ts",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.89.0"
+    "@anthropic-ai/sdk": "^0.89.0",
+    "next": "16.2.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^4.1.4",
     "tsx": "^4.19.2",
     "typescript": "^5",
