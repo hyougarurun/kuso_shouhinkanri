@@ -1,47 +1,32 @@
 # 作業進捗
 
 ## 現在の作業
-- 機能: **PC UI フルリニューアル 設計フェーズ**（加工費推定 PoC は A〜D2 完了済）
-- 状態: **設計メモまで完了、実装未着手**。k2 が Claude Design で具体化を試したが、Claude Design が **ローカルの設計メモファイルを読めず混乱**。方針再調整中
+- 機能: **PC UI フルリニューアル 完了**（加工費推定 PoC も完全統合済）
+- 状態: **P1〜P7 全完了（2026-04-19）**。ホーム 2 分割、/estimate フル機能、商品↔推定 D&D 連携、ウィザード 3 ステップ、商品詳細 PC 化。すべて動作確認済 + push 済
 - リポジトリ: https://github.com/hyougarurun/kuso_shouhinkanri
-- ブランチ: `feature/print-cost-poc`（最新 commit: 16e50d5）
+- ブランチ: `feature/print-cost-poc`（最新 commit: 8937f34）
+- 次にやること:
+  1. k2 の実使用フィードバック次第で微調整
+  2. main へのマージ判断（PR 作成 → レビュー → マージ）
+  3. その後 Phase 1（Supabase/Drive/Sheets 統合）再開検討
 
-### 🔥 次セッション開始時に k2 に提示すべき選択肢
-1. **A: Claude Design を再トライ**
-   - 設計メモ§7 のプロンプトを claude.ai/Claude Design の**チャット欄に直接コピペ**（ローカルパス参照ではテキストが読めない）
-   - 参照 URL: https://github.com/hyougarurun/kuso_shouhinkanri/blob/feature/print-cost-poc/docs/design-notes/pc-ui-renewal.md
-2. **B: 設計メモを Claude Design にファイルアップロード**
-   - .md を Claude Design 画面へドラッグ&ドロップ
-3. **C: Claude Design 使わず Claude Code（私）が直接実装**（Phase P1〜P8、約 14h）
-   - 設計メモは私が作ったので齟齬なし
-   - 最速で成果物が出る
+### ✅ 完了した Phase
+| Phase | 内容 | commit |
+|---|---|---|
+| P1 | サイドバー + TopBar + レイアウト基盤（max-w-1440） | 6ee4183 |
+| P2 | ホーム画面 2 分割（商品管理 flex-2 / 加工費推定 flex-1） | 6ee4183 |
+| 追加 | 商品カード↔加工費推定の D&D 連携 + 2枚目以降サムネ拡大 | 580b817 |
+| 追加 | /estimate フルページ + 画像アップロード + Claude Vision 連携 | 9801f1b |
+| P3-P6 | 新規登録ウィザード 3 ステップ化（加工費推測→登録情報→登録完了） | d5d6bc6 |
+| P7 | 商品詳細画面 PC 幅（max-w-1200） | 8937f34 |
 
-### 📋 設計メモに記載済みの確定要件（2026-04-18 k2「推奨で」指示）
-| Q | 決定 |
-|---|---|
-| Q1 ホームレイアウト | 左右 2 カード（商品管理 flex-2 / 加工費推定 flex-1） |
-| Q2 登録フロー | 3 ステップ: 加工費推測 → 登録情報 → 登録完了 |
-| Q3 BOX 表記 | 各ステップを 1 つの大 BOX |
-| Q4 横幅 | 最大 1440px |
-| Q5 ナビ | 左サイドバー 220px 固定 |
-| Q6 Claude Design | 私がテキスト仕様 → k2 が Claude Design で具体化 → 私が実装 |
+### 🚧 残り軽微タスク
+- 商品詳細の 2 カラム化（最小対応済、最適化は余力で）
+- Phase 1 再開時に PC UI との整合性確認
 
-### 🛠 実装 Phase（設計メモ §8）
-- P1: サイドバー + レイアウト基盤（1h）
-- P2: ホーム画面 2 分割（2h）
-- P3: 新規登録ウィザード 3 ステップ化（3h）
-- P4: Step 1 加工費推測（2h）
-- P5: Step 2 登録情報入力（2h）
-- P6: Step 3 登録完了（1h）
-- P7: 商品詳細 PC 版（2h）
-- P8: 微調整・commit/push（1h）
-- 合計 **約 14h**
-
-### 保留タスク（PoC 精度改善系、優先度低）
-- 業者調査（issuer null）
-- ParsedInvoice 型に issuer/invoiceNumber 追加
-- P7 類似画像検索（OpenCLIP）
-- Phase 1（本体 Supabase 基盤、当初計画）
+### 保留タスク（優先度低）
+- 加工費推定 PoC の精度改善系: 業者調査（issuer null）、ParsedInvoice 型拡張、類似画像検索
+- Phase 1 本体統合: Supabase / Drive / Sheets
 - 進行方針: **直列処理**（Phase 1.1 と PoC の並行作業は避ける。PoC 完了後に Phase 1.1 を再開）
 - 確定事項（2026-04-17 PoC）:
   - Q1 開始時期 = B（Phase 1 と並行ブランチ）
