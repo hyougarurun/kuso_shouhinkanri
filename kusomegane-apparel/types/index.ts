@@ -76,8 +76,23 @@ export interface Product {
   steps: FlowStep[]
   assets: ProductAssets
   sampleArrivalDate?: string
+  estimation?: ProductEstimation
   createdAt: string
   updatedAt: string
+}
+
+export interface ProductEstimation {
+  bodyCode: string
+  color?: string
+  location: string
+  method: string
+  bodyPriceRange: string
+  bodyPriceMin?: number
+  bodyPriceMax?: number
+  subtotalProcessing: number
+  totalMin?: number
+  totalMax?: number
+  estimatedAt: string
 }
 
 export interface ImageAnalysis {

@@ -42,6 +42,12 @@ export default function Home() {
     }
   }
 
+  function handleEstimateRegistered(updated: Product) {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === updated.id ? updated : p)),
+    )
+  }
+
   return (
     <div className="grid grid-cols-3 gap-6 min-h-[calc(100vh-96px)]">
       {/* 左: 商品管理 (span 2) */}
@@ -88,7 +94,7 @@ export default function Home() {
 
       {/* 右: 加工費推定 */}
       <aside className="col-span-1">
-        <QuickEstimateCard />
+        <QuickEstimateCard onRegistered={handleEstimateRegistered} />
       </aside>
     </div>
   )
