@@ -1,7 +1,12 @@
-import { ImageAnalysis, Product } from "@/types"
+import { ImageAnalysis, Product, ProductEstimation } from "@/types"
 import { DEFAULT_MATERIAL } from "@/constants"
+import type {
+  EstimationResult,
+  NormalizedLocation,
+  NormalizedMethod,
+} from "@/lib/print-cost/types"
 
-export type WizardStep = 1 | 2 | 3 | 4
+export type WizardStep = 1 | 2 | 3
 
 export interface WizardImage {
   dataUrl: string
@@ -30,12 +35,25 @@ export interface WizardCaption {
   fullText: string
 }
 
+export interface WizardEstimationLocation {
+  location: NormalizedLocation
+  method: NormalizedMethod | ""
+}
+
+export interface WizardEstimation {
+  bodyCode: string
+  color: string
+  locations: WizardEstimationLocation[]
+  result: EstimationResult | null
+}
+
 export interface WizardState {
   step: WizardStep
   image: WizardImage | null
   analysis: ImageAnalysis | null
   basic: WizardBasic
   caption: WizardCaption | null
+  estimation: WizardEstimation | null
 }
 
 export function initialWizardState(): WizardState {
@@ -58,6 +76,7 @@ export function initialWizardState(): WizardState {
       notes: "",
     },
     caption: null,
+    estimation: null,
   }
 }
 
@@ -69,15 +88,43 @@ export function validateBasic(b: WizardBasic): string[] {
   return errors
 }
 
+function estimationToProductEstimation(
+  est: WizardEstimation,
+  now: string,
+): ProductEstimation | undefined {
+  if (!est.result) return undefined
+  const first = est.locations[0] ?? {
+    location: "front" as const,
+    method: "ink_print" as const,
+  }
+  return {
+    bodyCode: est.bodyCode,
+    color: est.color || undefined,
+    location: first.location,
+    method: first.method || "ink_print",
+    bodyPriceRange: est.result.bodyPrice.range,
+    bodyPriceMin: est.result.bodyPrice.minPrice,
+    bodyPriceMax: est.result.bodyPrice.maxPrice,
+    subtotalProcessing: est.result.subtotalProcessing,
+    totalMin: est.result.totalMin,
+    totalMax: est.result.totalMax,
+    estimatedAt: now,
+  }
+}
+
 export function wizardToProducts(
   state: WizardState,
   productNumbers: string[],
   baseNumber: number,
   makeId: () => string,
-  now: string
+  now: string,
 ): Product[] {
-  const { basic, image, caption } = state
+  const { basic, image, caption, estimation } = state
   const captionText = caption?.fullText ?? ""
+  const productEstimation = estimation
+    ? estimationToProductEstimation(estimation, now)
+    : undefined
+
   return productNumbers.map((num, idx) => {
     const hyphenIndex = num.indexOf("-")
     const colorIndex = hyphenIndex >= 0 ? idx : undefined
@@ -119,6 +166,7 @@ export function wizardToProducts(
         sizeDetailDone: false,
         captionDone: captionText.length > 0,
       },
+      estimation: productEstimation,
       createdAt: now,
       updatedAt: now,
     }
