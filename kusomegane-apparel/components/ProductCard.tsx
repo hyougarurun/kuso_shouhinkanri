@@ -20,6 +20,8 @@ export function ProductCard({ product }: { product: Product }) {
   const countdown = computeSampleCountdown(product.sampleArrivalDate)
   const colorStyle = getColorStyle(product.colors[0])
   const step5Done = product.steps.find((s) => s.stepNumber === 5)?.status === "done"
+  const hasDrive = (product.driveFiles?.length ?? 0) > 0
+  const hasSheet = !!product.sheetRegisteredAt
 
   function onDragStart(e: React.DragEvent<HTMLDivElement>) {
     e.dataTransfer.setData(PRODUCT_DRAG_TYPE, product.id)
@@ -38,7 +40,12 @@ export function ProductCard({ product }: { product: Product }) {
       draggable
       onDragStart={onDragStart}
       onClick={onClick}
-      className="block bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer active:cursor-grabbing select-none"
+      className={
+        "block bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer active:cursor-grabbing select-none " +
+        (hasDrive
+          ? "ring-2 ring-lime-400 ring-offset-1"
+          : "")
+      }
     >
       {/* 画像エリア */}
       <div
@@ -87,8 +94,26 @@ export function ProductCard({ product }: { product: Product }) {
 
       {/* 下部情報 */}
       <div className="p-2.5 space-y-1">
-        <div className="text-[13px] font-bold text-zinc-900 leading-tight line-clamp-1">
-          {product.name}
+        <div className="flex items-center gap-1.5">
+          <div className="flex-1 text-[13px] font-bold text-zinc-900 leading-tight line-clamp-1">
+            {product.name}
+          </div>
+          {hasSheet && (
+            <span
+              title="シート登録済み"
+              className="shrink-0 text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1 py-0.5"
+            >
+              シート済
+            </span>
+          )}
+          {hasDrive && (
+            <span
+              title={`Drive ${product.driveFiles?.length ?? 0} ファイル格納済み`}
+              className="shrink-0 text-[9px] font-bold text-lime-800 bg-lime-50 border border-lime-300 rounded px-1 py-0.5"
+            >
+              Drive {product.driveFiles?.length}
+            </span>
+          )}
         </div>
         <div className="text-[11px] text-zinc-500 line-clamp-1">
           {product.series} · {product.colors.join("・")}

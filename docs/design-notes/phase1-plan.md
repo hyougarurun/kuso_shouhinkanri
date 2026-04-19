@@ -215,3 +215,63 @@ export async function POST(req: Request) {
 - fal.ai webhook が公開URL必須のため Phase 1.4 で本番URL確保
 - 1.4 でデプロイ → 1.5/1.6 は本番URL前提で Sheets/Drive OAuth リダイレクトを設定
 - 本格運用切り替えは Phase 1.6 完了後
+
+---
+
+## 6. Sheets / Drive 確定仕様（2026-04-19 k2 回答に基づく再確定）
+
+### 6.1 Sheets（ASTORE 製品管理シート）
+- **書き込み先**: 既存シートの **「リスト1」に直接追記** （新規シート作らず、一貫性重視）
+  - `GOOGLE_SHEETS_SPREADSHEET_ID=1ZygaSDtEF5w3a8URi6dA4Don4YWZ0vmNFjx93zr1jU4`
+  - リスト1 タブ（gid=1641291870）
+- **トリガー**: 商品詳細画面の **「シートに登録」ボタン**（手動）
+- **書き込む列**（k2 共有 Excel の 1 行目ヘッダー通り、新列追加なし）:
+  | 列 | 項目 | 格納値 |
+  |---|---|---|
+  | A | 商品 | 合成画像（セルに画像埋め込み、または空欄で画像リンクは G 列へ） |
+  | B | 商品番号 | `product.productNumber` 例: `59`, `60-1` |
+  | C | 色 | `product.colors.join("・")` |
+  | D | サイズ | `product.sizes.join("・")` |
+  | E | 加工 | `product.processingInstruction`（①タグ付け ②正面インク 等） |
+  | F | ボディ型番 | `product.bodyModelNumber` |
+  | G | デザインファイル | **Drive 商品番号フォルダの URL** |
+  | H | 備考 | `product.notes` |
+- **差分方針（Q6 = A）**: 同じ商品番号の行が既にあれば **上書き（UPDATE）**、なければ末尾に追加（APPEND）
+  - 内部で `product.sheetRowNumber` を保持して行番号を追跡
+
+### 6.2 Drive（添付ファイル置き場）
+- **フォルダ構成（Q3）**: 商品番号ごとに 1 フォルダ、命名は **商品番号のみ**（例: `59/`, `60-1/`）
+  - 親フォルダ: `GOOGLE_DRIVE_PARENT_FOLDER_ID=1jP6r0FSeSva_4z-XXiguKHzZ5uAYL1L1`
+- **対応ファイル形式（Q4）**: `.ai / .psd / .png / .jpg / .pdf / .zip` 等 **MIME 無制限**
+- **UI（Q5）**: 商品詳細画面に **D&D 添付領域**（`<input type="file" multiple>` + ドロップ対応）
+  - 添付済みファイル一覧（ファイル名 / サイズ / Drive View リンク）
+- **カード表示（Q5）**: Drive に 1 ファイル以上格納済みの商品は **カードを黄緑枠**で表示
+
+### 6.3 UI 追加ボタン（Phase 1 で実 API に接続）
+- 商品詳細画面:
+  - 「シートに登録」ボタン → `POST /api/sheets/register`（Phase 1.6 で実装）
+  - Drive D&D エリア → `POST /api/drive/upload`（Phase 1.5 で実装）
+- ホーム商品カード:
+  - Drive 格納済み判定: `product.driveFiles && product.driveFiles.length > 0`
+  - シート登録済み判定: `product.sheetRegisteredAt != null`
+
+### 6.4 Product 型の追加フィールド
+```typescript
+interface DriveFile {
+  id: string              // Drive file id
+  name: string
+  mimeType: string
+  sizeBytes?: number
+  webViewLink?: string    // 閲覧 URL
+  uploadedAt: string
+}
+
+interface Product {
+  // ...既存
+  driveFolderUrl: string        // 既存、Phase 1 で実値を書き込み
+  driveFiles?: DriveFile[]      // 新規、ドライブ添付ファイル
+  sheetRegisteredAt?: string    // 新規、シート登録日時
+  sheetRowNumber?: number       // 新規、リスト1 の行番号（上書き判定用）
+}
+```
+

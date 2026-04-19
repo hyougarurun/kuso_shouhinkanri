@@ -49,6 +49,15 @@ export interface OrderQuantities {
   XXL?: number
 }
 
+export interface DriveFile {
+  id: string
+  name: string
+  mimeType: string
+  sizeBytes?: number
+  webViewLink?: string
+  uploadedAt: string
+}
+
 export interface Product {
   id: string
   productNumber: string
@@ -68,7 +77,10 @@ export interface Product {
   notes: string
   orderQuantities: OrderQuantities
   driveFolderUrl: string
+  driveFiles?: DriveFile[]
   sheetRowNumbers: Record<string, number>
+  sheetRegisteredAt?: string
+  sheetRowNumber?: number
   captionText: string
   imagePreview: string | null
   images?: ProductImages
