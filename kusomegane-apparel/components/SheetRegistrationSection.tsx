@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Product } from "@/types"
 
 type Props = {
@@ -7,25 +8,59 @@ type Props = {
   onUpdate: (next: Product) => void
 }
 
+type RegisterResponse = {
+  rowNumber: number
+  mode: "append" | "update"
+}
+
 export function SheetRegistrationSection({ product, onUpdate }: Props) {
   const registered = !!product.sheetRegisteredAt
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [lastMode, setLastMode] = useState<"append" | "update" | null>(null)
 
-  function register() {
-    const now = new Date().toISOString()
-    onUpdate({
-      ...product,
-      sheetRegisteredAt: now,
-      updatedAt: now,
-    })
+  async function register() {
+    setLoading(true)
+    setError(null)
+    setLastMode(null)
+    try {
+      const res = await fetch("/api/sheets/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product }),
+      })
+      const data = (await res.json()) as RegisterResponse | { error: string }
+      if (!res.ok || !("rowNumber" in data)) {
+        throw new Error(
+          "error" in data
+            ? data.error
+            : `シート登録失敗（HTTP ${res.status}）`,
+        )
+      }
+      const now = new Date().toISOString()
+      onUpdate({
+        ...product,
+        sheetRegisteredAt: now,
+        sheetRowNumber: data.rowNumber,
+        updatedAt: now,
+      })
+      setLastMode(data.mode)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
+    }
   }
 
   function unregister() {
+    // ローカル記録のみリセット（シート上の行は残す。手動で消す想定）
     onUpdate({
       ...product,
       sheetRegisteredAt: undefined,
       sheetRowNumber: undefined,
       updatedAt: new Date().toISOString(),
     })
+    setLastMode(null)
   }
 
   return (
@@ -35,7 +70,7 @@ export function SheetRegistrationSection({ product, onUpdate }: Props) {
           <h2 className="text-sm font-bold">ASTORE シート登録</h2>
           <p className="text-[10px] text-zinc-500 mt-0.5">
             「リスト1」シートに 8 列（商品 / 商品番号 / 色 / サイズ / 加工 /
-            ボディ型番 / デザインファイル / 備考）を追記
+            ボディ型番 / デザインファイル / 備考）を追記 or 上書き
           </p>
         </div>
         {registered && (
@@ -46,33 +81,52 @@ export function SheetRegistrationSection({ product, onUpdate }: Props) {
       </div>
 
       {registered ? (
-        <div className="flex items-center justify-between pt-1">
-          <p className="text-[11px] text-zinc-600">
-            {new Date(product.sheetRegisteredAt!).toLocaleString("ja-JP")} に登録
-            {product.sheetRowNumber !== undefined &&
-              ` (行 ${product.sheetRowNumber})`}
-          </p>
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-zinc-600">
+              {new Date(product.sheetRegisteredAt!).toLocaleString("ja-JP")} に登録
+              {product.sheetRowNumber !== undefined &&
+                ` (行 ${product.sheetRowNumber})`}
+            </p>
+            <button
+              type="button"
+              onClick={unregister}
+              className="text-[11px] text-zinc-500 hover:text-red-600 underline"
+            >
+              登録を取り消す
+            </button>
+          </div>
           <button
             type="button"
-            onClick={unregister}
-            className="text-[11px] text-zinc-500 hover:text-red-600 underline"
+            onClick={register}
+            disabled={loading}
+            className="w-full rounded-md border border-zinc-300 bg-white text-zinc-900 text-sm font-bold py-2 hover:bg-zinc-50 disabled:opacity-50 transition"
           >
-            登録を取り消す
+            {loading ? "更新中…" : "シートを最新に更新する"}
           </button>
         </div>
       ) : (
         <button
           type="button"
           onClick={register}
-          className="w-full rounded-md bg-brand-yellow text-black text-sm font-bold py-2.5 hover:brightness-95 transition"
+          disabled={loading}
+          className="w-full rounded-md bg-brand-yellow text-black text-sm font-bold py-2.5 hover:brightness-95 disabled:opacity-50 transition"
         >
-          リスト1 シートに登録する
+          {loading ? "登録中…" : "リスト1 シートに登録する"}
         </button>
       )}
 
-      <p className="text-[10px] text-zinc-400">
-        ※ Phase 1.6 で Google Sheets へ自動追記。現在はローカル状態のみ
-      </p>
+      {error && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-2 text-[11px] text-red-700">
+          エラー: {error}
+        </div>
+      )}
+
+      {lastMode && (
+        <div className="text-[10px] text-green-700">
+          ✓ {lastMode === "append" ? "新規追加しました" : "既存行を上書きしました"}
+        </div>
+      )}
     </section>
   )
 }
