@@ -93,6 +93,26 @@ export type DriveUploadResult = {
 }
 
 /**
+ * ファイルを「リンクを知っている全員が閲覧可」にする。
+ * =IMAGE() でシートに画像埋め込みする用途で必要。
+ */
+export async function makeFilePubliclyViewable(
+  fileId: string,
+  auth?: OAuth2Client,
+): Promise<void> {
+  const client = driveClient(auth ?? createOAuth2Client())
+  await client.permissions.create({
+    fileId,
+    requestBody: { role: "reader", type: "anyone" },
+  })
+}
+
+/** Drive ファイルを =IMAGE() で表示するための URL（公開設定済み前提） */
+export function getDriveViewUrl(fileId: string): string {
+  return `https://drive.google.com/uc?export=view&id=${fileId}`
+}
+
+/**
  * 指定フォルダにバイナリをアップロードして file id / web view link を返す。
  * MIME 無制限（.ai / .psd / .zip 等も可）。
  */

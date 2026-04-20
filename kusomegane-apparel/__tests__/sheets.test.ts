@@ -43,7 +43,7 @@ describe("buildRowValues", () => {
   it("TC-SHEETS-001: 8 列（A〜H）を正しく組み立てる", () => {
     const row = buildRowValues(makeProduct())
     expect(row).toHaveLength(8)
-    expect(row[0]).toBe("") // A: 商品（画像欄、将来 =IMAGE()）
+    expect(row[0]).toBe("") // A: 画像 URL 無ければ空
     expect(row[1]).toBe("59") // B: 商品番号
     expect(row[2]).toBe("ホワイト・ブラック") // C: 色
     expect(row[3]).toBe("M・L・XL") // D: サイズ
@@ -70,5 +70,15 @@ describe("buildRowValues", () => {
   it("TC-SHEETS-003: 枝番商品（20-1）も B 列に文字列でそのまま入る", () => {
     const row = buildRowValues(makeProduct({ productNumber: "20-1" }))
     expect(row[1]).toBe("20-1")
+  })
+
+  it("TC-SHEETS-004: imageUrl を渡すと A 列に =IMAGE() が入る", () => {
+    const row = buildRowValues(
+      makeProduct(),
+      "https://drive.google.com/uc?export=view&id=ABC",
+    )
+    expect(row[0]).toBe(
+      '=IMAGE("https://drive.google.com/uc?export=view&id=ABC")',
+    )
   })
 })

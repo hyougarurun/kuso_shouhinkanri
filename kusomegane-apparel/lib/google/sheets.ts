@@ -2,6 +2,12 @@ import { google } from "googleapis"
 import type { OAuth2Client } from "google-auth-library"
 import type { Product } from "@/types"
 import { createOAuth2Client } from "./auth"
+import {
+  ensureProductFolder,
+  getDriveViewUrl,
+  makeFilePubliclyViewable,
+  uploadFileToDrive,
+} from "./drive"
 
 const SPREADSHEET_ID_ENV = "GOOGLE_SHEETS_SPREADSHEET_ID"
 const SHEET_NAME_ENV = "GOOGLE_SHEETS_TARGET_SHEET_NAME"
@@ -26,11 +32,15 @@ export type RegisterResult = {
 
 /**
  * Product → シート 1 行（A〜H）へマッピング。
- * A 列（商品画像）は空欄。Phase 2 で =IMAGE() や埋め込み対応予定。
+ * imageUrl があれば A 列に `=IMAGE("URL")` を入れる。無ければ空欄。
  */
-export function buildRowValues(product: Product): string[] {
+export function buildRowValues(
+  product: Product,
+  imageUrl?: string | null,
+): string[] {
+  const aCell = imageUrl ? `=IMAGE("${imageUrl}")` : ""
   return [
-    "", // A: 商品（画像、将来 =IMAGE() で埋める）
+    aCell, // A: 商品画像
     product.productNumber, // B: 商品番号
     product.colors.join("・"), // C: 色
     product.sizes.join("・"), // D: サイズ
@@ -39,6 +49,38 @@ export function buildRowValues(product: Product): string[] {
     product.driveFolderUrl, // G: デザインファイル（Drive URL）
     product.notes, // H: 備考
   ]
+}
+
+/**
+ * 合成画像（product.imagePreview の data URL）を Drive にアップロードして
+ * 公開設定にしたうえで =IMAGE() 用の URL を返す。画像が無い/不正なら null。
+ */
+async function uploadCompositeAndGetImageUrl(
+  product: Product,
+  auth: OAuth2Client,
+): Promise<string | null> {
+  if (!product.imagePreview) return null
+  const match = product.imagePreview.match(/^data:([^;]+);base64,(.+)$/)
+  if (!match) return null
+  const mimeType = match[1]
+  const base64 = match[2]
+  const buffer = Buffer.from(base64, "base64")
+
+  const folder = await ensureProductFolder(product.productNumber, auth)
+  const extension = mimeType.split("/")[1] || "png"
+  const filename = `composite_${Date.now()}.${extension}`
+
+  const uploaded = await uploadFileToDrive(
+    {
+      folderId: folder.id,
+      filename,
+      mimeType,
+      data: buffer,
+    },
+    auth,
+  )
+  await makeFilePubliclyViewable(uploaded.id, auth)
+  return getDriveViewUrl(uploaded.id)
 }
 
 function sheetsClient(auth: OAuth2Client) {
@@ -130,11 +172,20 @@ export async function registerProductToSheet(
 ): Promise<RegisterResult> {
   const spreadsheetId = requireSpreadsheetId()
   const sheetName = getTargetSheetName()
-  const client = sheetsClient(auth ?? createOAuth2Client())
+  const oauthClient = auth ?? createOAuth2Client()
+  const client = sheetsClient(oauthClient)
 
   await ensureSheetWithHeader(client, spreadsheetId, sheetName)
 
-  const row = buildRowValues(product)
+  // 合成画像を Drive にアップして =IMAGE() URL を取得（失敗しても空欄で続行）
+  let imageUrl: string | null = null
+  try {
+    imageUrl = await uploadCompositeAndGetImageUrl(product, oauthClient)
+  } catch {
+    imageUrl = null
+  }
+
+  const row = buildRowValues(product, imageUrl)
   const existing = await findExistingRow(
     client,
     spreadsheetId,
