@@ -26,6 +26,7 @@ import { SampleCountdownLabel } from "@/components/SampleCountdown"
 import { DriveStorageSection } from "@/components/DriveStorageSection"
 import { SheetRegistrationSection } from "@/components/SheetRegistrationSection"
 import { ImageSlots, SlotKey } from "@/components/ImageSlots"
+import { GallerySection } from "@/components/GallerySection"
 
 function isBooleanKey(k: AssetKey): k is BooleanAssetKey {
   return k === "sizeDetailDone" || k === "captionDone"
@@ -246,10 +247,12 @@ export default function ProductDetailPage() {
       </div>
 
       <div className="mx-auto max-w-[1200px] px-4 py-4 space-y-5">
-        {/* 画像スロット */}
-        {product.images && (
-          <section className="space-y-2">
-            <h2 className="text-[11px] font-bold text-zinc-500 px-1">クリエイティブ素材</h2>
+        {/* クリエイティブ素材: スロット + ギャラリー */}
+        <section className="space-y-2">
+          <h2 className="text-[11px] font-bold text-zinc-500 px-1">
+            クリエイティブ素材
+          </h2>
+          {product.images && (
             <div className="bg-white rounded-lg shadow-sm p-3">
               <ImageSlots
                 images={product.images}
@@ -257,8 +260,9 @@ export default function ProductDetailPage() {
                 onDelete={handleSlotDelete}
               />
             </div>
-          </section>
-        )}
+          )}
+          <GallerySection product={product} onUpdate={update} />
+        </section>
 
         {/* カウントダウン */}
         {!step5Done && countdown && (

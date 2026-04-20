@@ -58,6 +58,14 @@ export interface DriveFile {
   uploadedAt: string
 }
 
+export interface GalleryImage {
+  id: string
+  dataUrl: string
+  mimeType: string
+  sizeBytes?: number
+  addedAt: string
+}
+
 export interface Product {
   id: string
   productNumber: string
@@ -84,6 +92,7 @@ export interface Product {
   captionText: string
   imagePreview: string | null
   images?: ProductImages
+  gallery?: GalleryImage[]
   currentStep: number
   steps: FlowStep[]
   assets: ProductAssets
