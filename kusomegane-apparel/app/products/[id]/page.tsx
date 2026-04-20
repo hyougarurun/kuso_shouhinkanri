@@ -23,6 +23,8 @@ import {
 import { CaptionBlock } from "@/components/CaptionBlock"
 import { ProductInfoTable } from "@/components/ProductInfoTable"
 import { SampleCountdownLabel } from "@/components/SampleCountdown"
+import { DriveStorageSection } from "@/components/DriveStorageSection"
+import { SheetRegistrationSection } from "@/components/SheetRegistrationSection"
 import { ImageSlots, SlotKey } from "@/components/ImageSlots"
 
 function isBooleanKey(k: AssetKey): k is BooleanAssetKey {
@@ -176,7 +178,7 @@ export default function ProductDetailPage() {
 
   if (!loaded) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-10 text-center text-xs text-zinc-500">
+      <div className="mx-auto max-w-[1200px] px-4 py-10 text-center text-xs text-zinc-500">
         読み込み中...
       </div>
     )
@@ -184,7 +186,7 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-10 text-center text-xs text-zinc-500 space-y-3">
+      <div className="mx-auto max-w-[1200px] px-4 py-10 text-center text-xs text-zinc-500 space-y-3">
         <div>商品が見つかりません</div>
         <Link href="/" className="inline-block text-zinc-900 underline">
           ホームに戻る
@@ -243,7 +245,7 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-xl px-4 py-4 space-y-5">
+      <div className="mx-auto max-w-[1200px] px-4 py-4 space-y-5">
         {/* 画像スロット */}
         {product.images && (
           <section className="space-y-2">
@@ -299,6 +301,15 @@ export default function ProductDetailPage() {
         <section className="space-y-2">
           <h2 className="text-[11px] font-bold text-zinc-500 px-1">商品情報</h2>
           <ProductInfoTable product={product} />
+        </section>
+
+        {/* ASTORE シート登録 + Drive 添付 */}
+        <section className="space-y-3">
+          <h2 className="text-[11px] font-bold text-zinc-500 px-1">
+            外部連携（シート / Drive）
+          </h2>
+          <SheetRegistrationSection product={product} onUpdate={update} />
+          <DriveStorageSection product={product} onUpdate={update} />
         </section>
 
         {/* アクション */}

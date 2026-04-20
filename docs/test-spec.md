@@ -18,6 +18,8 @@
 | TD-SB-001 | モック Supabase クライアント | ファクトリ関数 | `__tests__/fixtures/supabaseMock.ts` の `makeSupabaseMock(overrides?)` を呼ぶ。`from()`, `storage.from().createSignedUrl()` 等を `vi.fn()` で差し替え可能なオブジェクトを返す | `client.from()` が `vi.fn()` インスタンス | TC-SB-001〜004 |
 | TD-IMG-001 | サンプル ImageRecord（DB 行想定） | ファクトリ関数 | `__tests__/fixtures/imageRecord.ts` の `makeImageRecord(overrides?)` を呼ぶ。`{ id, product_id, image_type: 'composite', storage_path, bucket: 'product-images', sort_order: 0, is_primary: false }` 形式 | `record.image_type === 'composite'` | TC-SB-005, TC-SB-006 |
 | TD-ENV-001 | 必須環境変数のセット/未セット切替 | テストヘルパ | `vi.stubEnv('SUPABASE_URL', 'https://x.supabase.co')` / `vi.unstubAllEnvs()` | `process.env.SUPABASE_URL` の値が切り替わる | TC-SB-001 |
+| TD-POC-FIX-001 | 2026/01 請求書パース結果の正解JSON | 手動作成 | `print-cost-estimator/tests/fixtures/invoice-2026-01.json` に `ParsedInvoice` 型で記述。`KUSOMEGANE様1月納品分ご請求金額.pdf`（合計 952,954円、明細 80〜120件）を元に手で起こす | `totalAmount === 952954` かつ `lineItems.length > 80` | TC-POC-P1-001〜002 |
+| TD-POC-RAW-001 | 生 lineItem 文字列サンプル | インライン | テストコード内に `'メガメガ 14-1 front'`, `'メガメガ 袖ワッペン'`, `'メガメガ ローレンくん インク'`, `'5001-01 5.6オンス Tシャツ・XXLホワイト'`, `'たたみOPP入れ'` を直接記述 | 文字列が正しく渡る | TC-POC-CLS-001, TC-POC-NRM-001〜002 |
 
 > **ルール:**
 > - 新しいテストケースを追加する際、必要なテストデータがなければ先にこのテーブルに追加する
@@ -725,6 +727,58 @@
 
 ---
 
+### カテゴリ: G. 加工費推定 PoC（`print-cost-estimator/src/*`）
+
+> **モジュール目的:** 過去の請求書から加工費の統計を学習し、合成商品画像の加工費を推定する PoC エンジン。
+> **優先度ポリシー:** 本番機能ではないため **P0-CRITICAL 指定なし**。全て `PoC` ラベルで管理し、CI 必須対象外（ブランチ `feature/print-cost-poc` 内のみ実行）。
+> **テスト方針:** フル TDD ではなく「RED→GREEN→REFACTOR の最低限のループを各テストで回す」簡易モードで進める。
+> 設計詳細: [`docs/design-notes/print-cost-estimation.md`](design-notes/print-cost-estimation.md)
+
+**テストケース一覧（PoC-P1: 請求書パーサー + 正規化/分類辞書）**
+
+| ID | テスト名 | 優先度 | 対象ファイル | テストパス |
+|----|---------|-------|------------|-----------|
+| TC-POC-CLS-001 | `classifyLineItem('メガメガ 14-1 front')` が `'processing_numbered'` を返す | PoC | `src/normalizer/classify.ts` | `tests/normalizer/classify.test.ts` |
+| TC-POC-CLS-002 | `classifyLineItem('メガメガ ローレンくん')` が `'processing_named'` を返す（学習対象外タグ） | PoC | 同上 | 同上 |
+| TC-POC-CLS-003 | `classifyLineItem('5001-01 5.6オンス Tシャツ・XXLホワイト')` が `'body'` を返す | PoC | 同上 | 同上 |
+| TC-POC-CLS-004 | `classifyLineItem('たたみOPP入れ')` と `classifyLineItem('佐川急便 関西140サイズ')` が `'material_shipping'` を返す | PoC | 同上 | 同上 |
+| TC-POC-NRM-001 | `normalizeLocation` が生データを正規化値に変換（front/back/袖→sleeve/両袖→both_sleeves/三か所→three_locations/空→unspecified） | PoC | `src/normalizer/location.ts` | `tests/normalizer/location.test.ts` |
+| TC-POC-NRM-002 | `normalizeMethod` が生データを正規化値に変換（インク→ink_print/刺繍→embroidery/ワッペン→patch/相良取付→sagara_attach/空→unspecified） | PoC | `src/normalizer/method.ts` | `tests/normalizer/method.test.ts` |
+| TC-POC-P1-001 | `parseInvoicePdf('2026-01.pdf')` の戻り値が `ParsedInvoice` 型の必須フィールドを満たす（sourceFile, totalAmount, lineItems[], parsedAt） | PoC | `src/parser/parseInvoicePdf.ts` | `tests/parser/parseInvoicePdf.test.ts` |
+| TC-POC-P1-002 | 2026/01 PDF のパース結果が fixture と整合（totalAmount=952954、lineItems に `メガメガ 14-1 front` unitPrice=900 quantity=34 が存在） | PoC | 同上 | 同上 |
+
+**テストケース一覧（PoC-P2: バッチ実行基盤）**
+
+| ID | テスト名 | 優先度 | 対象ファイル | テストパス |
+|----|---------|-------|------------|-----------|
+| TC-POC-P2-001 | `saveParsedInvoice` が ParsedInvoice を `{outputDir}/{sourceFile}.json` にインデント付きで書き出し、保存パスを返す | PoC | `src/batch/saveParsedInvoice.ts` | `tests/batch/saveParsedInvoice.test.ts` |
+| TC-POC-P2-002 | `batchParseInvoices` が PDF 配列を順次処理（直列）し、個別エラーは `failures[]` に記録して後続を継続、`successes.length + failures.length === inputs.length` | PoC | `src/batch/batchParseInvoices.ts` | `tests/batch/batchParseInvoices.test.ts` |
+
+**テストケース一覧（PoC-P3/P4: 統計集計）**
+
+| ID | テスト名 | 優先度 | 対象ファイル | テストパス |
+|----|---------|-------|------------|-----------|
+| TC-POC-P3-001 | `aggregateProcessingCosts` が `processing_numbered` 明細を `productNumber×location×method` でグループ化し、単一サンプルは min=median=max=unitPrice、samples=1 を返す | PoC | `src/aggregator/aggregateProcessingCosts.ts` | `tests/aggregator/aggregateProcessingCosts.test.ts` |
+| TC-POC-P3-002 | 複数サンプル（unitPrice=[800, 900, 1000]）で median=900、min=800、max=1000、samples=3 | PoC | 同上 | 同上 |
+| TC-POC-P3-003 | `taxAmount=0 && lineItems.length<=3` の ParsedInvoice（別業者）を除外 | PoC | 同上 | 同上 |
+| TC-POC-P3-004 | `type!=processing_numbered`（body / processing_named / material_shipping）は集計から除外 | PoC | 同上 | 同上 |
+| TC-POC-P4-001 | `buildBodyPriceRanges` が `type=body` 明細を `bodyCode×color` でまとめ、minPrice/maxPrice と sizeExamples を返す | PoC | `src/bodyPrice/buildBodyPriceRanges.ts` | `tests/bodyPrice/buildBodyPriceRanges.test.ts` |
+
+**テストケース一覧（PoC-P6: 推論エンジン）**
+
+| ID | テスト名 | 優先度 | 対象ファイル | テストパス |
+|----|---------|-------|------------|-----------|
+| TC-POC-P6-001 | `estimate({ bodyCode, locations })` が bodyPrice.range（`"minPrice〜maxPrice"`）と processing 内訳（各 location の median 単価）と subtotalProcessing（合計）を返す | PoC | `src/estimator/estimate.ts` | `tests/estimator/estimate.test.ts` |
+| TC-POC-P6-002 | 未知の bodyCode は `bodyPrice.range='不明'`、未知の (location, method) は `estimatedPrice=0, confidence='low', basedOn=0` として返し、例外を投げない | PoC | 同上 | 同上 |
+
+**補足**:
+- TC-POC-P1-001〜002 は **Claude API 実呼び出しを含む** ため、`ANTHROPIC_API_KEY` 未設定時は `it.skipIf` でスキップする
+- TC-POC-CLS-001〜004 / TC-POC-NRM-001〜002 は純関数の単体テスト。API キー不要
+- fixture は `TD-POC-FIX-001` を参照
+- 生文字列サンプルは `TD-POC-RAW-001` を参照
+
+---
+
 ## サマリー
 
 | カテゴリ | 総数 | P0-CRITICAL | P0 | P1 | P2 | PASS | FAIL | SKIP |
@@ -735,7 +789,10 @@
 | D. 次のアクション計算 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 3 |
 | E. サンプル到着カウントダウン | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 4 |
 | F. Supabase クライアント基盤（Phase 1.1） | 6 | **4** | 2 | 0 | 0 | 0 | 0 | 6 |
-| **合計** | **29** | **19** | **10** | **0** | **0** | **0** | **0** | **29** |
+| G. 加工費推定 PoC（PoC-P1/P2/P3/P4/P6） | 17 | 0 | 0 | 0 | 0 | 0 | 0 | 17 |
+| **合計** | **46** | **19** | **10** | **0** | **0** | **0** | **0** | **46** |
+
+> カテゴリ G は `PoC` ラベル（上表の優先度列とは別軸）で管理。CI 必須対象外。
 
 ### P0-CRITICAL テスト一覧（本番マージブロック対象）
 
@@ -772,3 +829,6 @@ CIで1つでもFAILするとmainブランチへのマージが不可になるテ
 | 2026-04-10 | - | テスト仕様書テンプレート作成 | 初期作成 |
 | 2026-04-16 | Claude (k2指示) | KUSOMEGANE アパレル管理ツール Phase 0 のロジック層テストケース 23件を追加（TC-STR-001〜006, TC-PN-001〜004, TC-CAP-001〜006, TC-NXT-001〜003, TC-CDN-001〜004）。P0-CRITICAL 15件指定。テストデータ TD-LS-001/TD-PROD-001〜003 追加 | （このcommitで） |
 | 2026-04-17 | Claude (k2指示) | Phase 1.1 用 カテゴリ F（Supabase クライアント基盤）テストケース 6件追加（TC-SB-001〜006、P0-CRITICAL 4件）。テストデータ TD-SB-001/TD-IMG-001/TD-ENV-001 追加。実 DB 接続は CI 対象外、純関数とモックで完結 | （このcommitで） |
+| 2026-04-17 | Claude (k2指示) | 加工費推定 PoC 用 カテゴリ G（PoC-P1: パーサー/分類/正規化）テストケース 8件追加（TC-POC-CLS-001〜004, TC-POC-NRM-001〜002, TC-POC-P1-001〜002）。`PoC` ラベルで CI 必須対象外。テストデータ TD-POC-FIX-001/TD-POC-RAW-001 追加 | （このcommitで） |
+| 2026-04-17 | Claude (k2指示) | 加工費推定 PoC-P2（バッチ実行基盤）テストケース 2件追加（TC-POC-P2-001 saveParsedInvoice, TC-POC-P2-002 batchParseInvoices）。合計カウントを 39 件に更新 | （このcommitで） |
+| 2026-04-18 | Claude (k2指示) | 加工費推定 PoC-P3/P4/P6（統計集計＋推論エンジン）テストケース 7件追加（TC-POC-P3-001〜004, TC-POC-P4-001, TC-POC-P6-001〜002）。合計 46 件 | （このcommitで） |

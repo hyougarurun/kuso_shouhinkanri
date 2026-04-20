@@ -29,3 +29,12 @@ Thumbs.db
 # ログ
 *.log
 npm-debug.log*
+
+# 機密情報を含む要件定義書（Supabase secret key 記載）
+要件定義書-最新版.md
+要件定義*
+
+# PoC データ（サイズ大、PDF/JSON/統計）
+print-cost-estimator/data/raw/
+print-cost-estimator/data/parsed/
+print-cost-estimator/data/stats/

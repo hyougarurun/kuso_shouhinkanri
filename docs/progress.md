@@ -1,12 +1,36 @@
 # 作業進捗
 
 ## 現在の作業
-- 機能: **加工費推定 PoC**（画像から加工費を自動推定するエンジンの検証）
-- 状態: PoC 設計確定（Q1〜Q14 すべて k2 承認済み）→ **feature/print-cost-poc ブランチ切って P1 着手**
+- 機能: **Phase 1（Supabase + Drive + Sheets 統合）実質完了（2026-04-20）**
+- 状態: 1.1〜1.3 動作確認済み、1.4（fal.ai + Vercel）は後回し可
+- リポジトリ: https://github.com/hyougarurun/kuso_shouhinkanri
+- ブランチ: `feature/print-cost-poc`（最新 commit: 93fca6a）
 - 次にやること:
-  1. `feature/print-cost-poc` ブランチ作成
-  2. PoC-P1 着手: 請求書パーサー（14 PDF の業者調査 → JSON スキーマ定義 → TDD で実装）
-- ブロッカー: なし
+  1. `feature/print-cost-poc` を `main` にマージするか判断（PR 作成）
+  2. 必要なら Phase 1.4（fal.ai 着画生成 + Vercel デプロイ）着手
+  3. k2 の本格運用開始、フィードバック収集
+- 完了した Phase 1:
+  - **1.1 Supabase 基盤**: DB スキーマ 4 テーブル適用済、lib/supabase/* 実装 + 6 テスト PASS
+  - **1.2 Drive 連携**: /api/drive/folder/ensure + /api/drive/upload、商品番号フォルダ自動作成、全形式 100MB まで
+  - **1.3 Sheets 連携**: /api/sheets/register、新規「商品管理」タブ自動作成、8 列（A=画像=IMAGE()、B〜H）、追記+上書き対応
+
+### ✅ 完了した Phase
+| Phase | 内容 | commit |
+|---|---|---|
+| P1 | サイドバー + TopBar + レイアウト基盤（max-w-1440） | 6ee4183 |
+| P2 | ホーム画面 2 分割（商品管理 flex-2 / 加工費推定 flex-1） | 6ee4183 |
+| 追加 | 商品カード↔加工費推定の D&D 連携 + 2枚目以降サムネ拡大 | 580b817 |
+| 追加 | /estimate フルページ + 画像アップロード + Claude Vision 連携 | 9801f1b |
+| P3-P6 | 新規登録ウィザード 3 ステップ化（加工費推測→登録情報→登録完了） | d5d6bc6 |
+| P7 | 商品詳細画面 PC 幅（max-w-1200） | 8937f34 |
+
+### 🚧 残り軽微タスク
+- 商品詳細の 2 カラム化（最小対応済、最適化は余力で）
+- Phase 1 再開時に PC UI との整合性確認
+
+### 保留タスク（優先度低）
+- 加工費推定 PoC の精度改善系: 業者調査（issuer null）、ParsedInvoice 型拡張、類似画像検索
+- Phase 1 本体統合: Supabase / Drive / Sheets
 - 進行方針: **直列処理**（Phase 1.1 と PoC の並行作業は避ける。PoC 完了後に Phase 1.1 を再開）
 - 確定事項（2026-04-17 PoC）:
   - Q1 開始時期 = B（Phase 1 と並行ブランチ）
@@ -58,6 +82,18 @@
 - PoC-P9: 精度検証（MAPE < 20% 目標）
 
 ## 直近の完了タスク
+- 2026-04-20 **Phase 1.1-1.3 完全動作確認**: Supabase DB push 済、Drive フォルダ自動作成+ファイルアップ、Sheets 新規タブ「商品管理」に 8 列自動追記 + A 列に合成画像埋め込み（=IMAGE() + Drive 公開 URL）。60/60 テスト PASS
+  - commit: 2ea3010, b00c90f, 41f1b0e, 4489db0, 93fca6a
+- 2026-04-18 **PoC-C1 完了**: 画像アップロード → Claude Vision で加工箇所自動判定。`/api/analyze-image` + 画像アップロード UI 実装。kusomegane-char.png でテスト時、アパレル判定のgraceful fallbackを確認
+  - commit: c72655f（src/vision/analyzeImage.ts, app/api/analyze-image/route.ts, app/page.tsx更新）
+- 2026-04-18 **PoC-B 完了**: Next.js 16 最小 Web UI（port 3101）。`/api/estimate` Route + 推定フォーム + 結果テーブル。API 実呼び出しで 5001-01 ホワイト → ¥1,900 推定成功
+  - commit: 32b3982
+- 2026-04-18 **PoC-A 完了**: 統計集計（P3/P4）+ 推論エンジン（P6）+ CLI 実装。全 7 件 TDD PASS。`npm run estimate -- --bodyCode 5001-01 --locations front,back` で CLI 動作確認
+  - commit: f389ead, bd7f7b6
+- 2026-04-18 **PoC-P2 完了**: 14 PDF 一括パース **14/14 成功**（39分、API コスト 約 $5.8）。合計 1,930 明細、¥17,942,344 分を構造化。業者分類判明（taxAmount=0 の 202501/202502 は別業者、他 12 件はメガメガくん）。レポート: `docs/design-notes/poc-p2-batch-result.md`
+  - commit: 5c1bd9b（バッチ基盤: saveParsedInvoice + batchParseInvoices + CLI）
+- 2026-04-17 **PoC-P1 完了**: 請求書パーサー実装。全 8 テスト PASS（分類4 + 正規化2 + Claude API実呼び出し2）。2026/01 PDF（合計 952,954円）から メガメガ14-1 front (900円×34枚) を自動抽出確認。Stream API + claude-sonnet-4-6、API 使用量 約 $0.41/PDF
+  - commit: 3bc57c4（正規化層）, e1904c2（parseInvoicePdf 本体）
 - 2026-04-17 加工費推定 PoC 設計完了: Q1〜Q14 確定 → `docs/design-notes/print-cost-estimation.md` 作成（請求書14 PDF カタログ、学習ルール、Phase 分割、ディレクトリ構成）
 - 2026-04-17 Phase 1.1 テスト設計: Supabase クライアント基盤のテストケース6件追加（commit 82df461、PoC 完了まで実装保留）
 - 2026-04-17 Phase 1 調査完了: 既存実装/着画AI/Google API/Supabase の4並列リサーチ → `docs/design-notes/phase1-plan.md` + `docs/design-notes/google-integration-prep.md` + `docs/preparation-checklist.md` 作成
@@ -71,6 +107,7 @@
 
 ## 設計メモへのリンク
 - [加工費推定 PoC 設計メモ](design-notes/print-cost-estimation.md) **← 現在アクティブ**
+- [PoC-P2 バッチパース実行結果](design-notes/poc-p2-batch-result.md) **← 最新結果 (2026-04-18)**
 - [KUSOMEGANE アパレル商品管理ツール 設計メモ（Phase 0）](design-notes/kusomegane-apparel.md)
 - [Phase 1 実装計画書](design-notes/phase1-plan.md)
 - [Google API 統合準備](design-notes/google-integration-prep.md)

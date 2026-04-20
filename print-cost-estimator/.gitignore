@@ -1,0 +1,22 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+
+# Next.js
+.next/
+tsconfig.tsbuildinfo
+
+# PoC 学習データ（サイズ大、機密情報含む可能性あり）
+data/raw/
+data/parsed/
+data/stats/
+!data/raw/.gitkeep
+!data/parsed/.gitkeep
+!data/stats/.gitkeep
+
+# エディタ
+.DS_Store
+*.log
