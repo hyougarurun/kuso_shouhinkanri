@@ -11,9 +11,14 @@ type Props = {
 }
 
 async function fileToGalleryImage(file: File): Promise<GalleryImage> {
-  // 表示負荷・LocalStorage 容量対策のため長辺 800px に縮小して保存
-  const resized = await resizeImage(file)
-  const sizeEstimate = Math.floor(resized.base64.length * 0.75) // base64 の概算バイト数
+  // LocalStorage 容量対策: 長辺 600px、JPEG 強制、quality 0.7 に固定。
+  // 1 枚あたり 30〜80 KB 程度に収める。
+  const resized = await resizeImage(file, {
+    maxSize: 600,
+    quality: 0.7,
+    forceJpeg: true,
+  })
+  const sizeEstimate = Math.floor(resized.base64.length * 0.75)
   return {
     id: uuid(),
     dataUrl: resized.dataUrl,

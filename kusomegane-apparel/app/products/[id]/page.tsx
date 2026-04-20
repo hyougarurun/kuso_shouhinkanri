@@ -161,87 +161,95 @@ export default function ProductDetailPage() {
         </div>
       </header>
 
-      {/* クリエイティブ素材: Gallery のみ */}
-      <section>
-        <GallerySection product={product} onUpdate={update} />
-      </section>
+      {/* 2 カラム: 左 2/3 メイン + 右 1/3 外部連携・アクション */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="col-span-2 space-y-4 min-w-0">
+          {/* クリエイティブ素材: Gallery のみ */}
+          <section>
+            <GallerySection product={product} onUpdate={update} />
+          </section>
 
-        {/* カウントダウン */}
-        {!step5Done && countdown && (
-          <div className="flex items-center justify-between bg-white rounded-lg shadow-sm px-3 py-2">
-            <div className="text-[12px] text-zinc-500">サンプル到着</div>
-            <SampleCountdownLabel data={countdown} />
-          </div>
-        )}
+          {/* カウントダウン */}
+          {!step5Done && countdown && (
+            <div className="flex items-center justify-between bg-white rounded-lg shadow-sm px-3 py-2">
+              <div className="text-[12px] text-zinc-500">サンプル到着</div>
+              <SampleCountdownLabel data={countdown} />
+            </div>
+          )}
 
-        {/* ステップタイムライン */}
-        <section className="space-y-2">
-          <h2 className="text-[11px] font-bold text-zinc-500 px-1">進捗ステップ</h2>
-          <StepTimeline
-            product={product}
-            onToggle={toggleStep}
-            onSampleDateChange={setSampleDate}
-            step5Content={
-              !step5Done && countdown ? (
-                <SampleCountdownLabel data={countdown} />
-              ) : null
-            }
-            step7Content={
-              <AssetsChecklist
-                assets={product.assets}
-                onToggle={toggleAsset}
-                images={product.images}
-                captionText={product.captionText}
-              />
-            }
-          />
-        </section>
+          {/* ステップタイムライン */}
+          <section className="space-y-2">
+            <h2 className="text-[11px] font-bold text-zinc-500 px-1">進捗ステップ</h2>
+            <StepTimeline
+              product={product}
+              onToggle={toggleStep}
+              onSampleDateChange={setSampleDate}
+              step5Content={
+                !step5Done && countdown ? (
+                  <SampleCountdownLabel data={countdown} />
+                ) : null
+              }
+              step7Content={
+                <AssetsChecklist
+                  assets={product.assets}
+                  onToggle={toggleAsset}
+                  images={product.images}
+                  captionText={product.captionText}
+                />
+              }
+            />
+          </section>
 
-        {/* キャプション */}
-        <section className="space-y-2">
-          <h2 className="text-[11px] font-bold text-zinc-500 px-1">キャプション</h2>
-          <CaptionBlock text={product.captionText} />
-        </section>
+          {/* キャプション */}
+          <section className="space-y-2">
+            <h2 className="text-[11px] font-bold text-zinc-500 px-1">キャプション</h2>
+            <CaptionBlock text={product.captionText} />
+          </section>
 
-        {/* 商品情報 */}
-        <section className="space-y-2">
-          <h2 className="text-[11px] font-bold text-zinc-500 px-1">商品情報</h2>
-          <ProductInfoTable product={product} />
-        </section>
+          {/* 商品情報 */}
+          <section className="space-y-2">
+            <h2 className="text-[11px] font-bold text-zinc-500 px-1">商品情報</h2>
+            <ProductInfoTable product={product} />
+          </section>
+        </div>
 
-        {/* ASTORE シート登録 + Drive 添付 */}
-        <section className="space-y-3">
-          <h2 className="text-[11px] font-bold text-zinc-500 px-1">
-            外部連携（シート / Drive）
-          </h2>
-          <SheetRegistrationSection product={product} onUpdate={update} />
-          <DriveStorageSection product={product} onUpdate={update} />
-        </section>
+        <aside className="col-span-1 space-y-3 min-w-0">
+          {/* 外部連携 */}
+          <section className="space-y-3">
+            <h2 className="text-[11px] font-bold text-zinc-500 px-1">
+              外部連携
+            </h2>
+            <SheetRegistrationSection product={product} onUpdate={update} />
+            <DriveStorageSection product={product} onUpdate={update} />
+          </section>
 
-        {/* アクション */}
-        <section className="pt-2 space-y-2">
-          <button
-            type="button"
-            onClick={handleDownloadZip}
-            className="w-full rounded-lg bg-zinc-900 text-white text-xs font-bold py-2 hover:bg-zinc-800"
-          >
-            クリエイティブをダウンロード
-          </button>
-          <button
-            type="button"
-            onClick={handleDuplicate}
-            className="w-full rounded-lg border border-zinc-300 bg-white text-zinc-900 text-xs font-bold py-2 hover:bg-zinc-50"
-          >
-            この商品を複製する
-          </button>
-          <button
-            type="button"
-            onClick={deleteProduct}
-            className="w-full rounded-lg border border-red-200 bg-white text-red-600 text-xs font-bold py-2 hover:bg-red-50"
-          >
-            この商品を削除する
-          </button>
-        </section>
+          {/* アクション */}
+          <section className="space-y-2">
+            <h2 className="text-[11px] font-bold text-zinc-500 px-1">アクション</h2>
+            <button
+              type="button"
+              onClick={handleDownloadZip}
+              className="w-full rounded-lg bg-zinc-900 text-white text-xs font-bold py-2 hover:bg-zinc-800"
+            >
+              アセット一括ダウンロード (ZIP)
+            </button>
+            <button
+              type="button"
+              onClick={handleDuplicate}
+              className="w-full rounded-lg border border-zinc-300 bg-white text-zinc-900 text-xs font-bold py-2 hover:bg-zinc-50"
+            >
+              この商品を複製する
+            </button>
+            <button
+              type="button"
+              onClick={deleteProduct}
+              className="w-full rounded-lg border border-red-200 bg-white text-red-600 text-xs font-bold py-2 hover:bg-red-50"
+            >
+              この商品を削除する
+            </button>
+          </section>
+        </aside>
+      </div>
     </div>
   )
 }

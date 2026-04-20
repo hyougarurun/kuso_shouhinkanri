@@ -2,13 +2,6 @@ import JSZip from "jszip"
 import { Product } from "@/types"
 import { ensureImages } from "@/lib/migrateProduct"
 
-const SLOT_LABELS: { key: "composite" | "processing" | "wearing" | "sizeDetail"; filename: string }[] = [
-  { key: "composite", filename: "01_合成画像.png" },
-  { key: "processing", filename: "02_加工箇所.png" },
-  { key: "wearing", filename: "03_着画.png" },
-  { key: "sizeDetail", filename: "04_サイズ詳細.png" },
-]
-
 export function buildProductInfoText(product: Product): string {
   return [
     `商品名: ${product.name}`,
@@ -36,20 +29,38 @@ export function dataUrlToUint8Array(dataUrl: string): Uint8Array {
 }
 
 function productFolderName(product: Product): string {
-  return `${product.productNumber}_${product.name}`
+  // ファイルシステム NG 記号を除去
+  const safe = product.name.replace(/[\\/:*?"<>|]/g, "_")
+  return `${product.productNumber}_${safe}`
 }
 
-export async function exportProductZip(product: Product): Promise<Blob> {
-  const zip = new JSZip()
-  const migrated = ensureImages(product)
-  const folder = zip.folder(productFolderName(migrated))!
+function extensionFromMime(mime: string): string {
+  if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg"
+  if (mime.includes("png")) return "png"
+  if (mime.includes("webp")) return "webp"
+  if (mime.includes("gif")) return "gif"
+  return "bin"
+}
 
-  const images = migrated.images!
-  for (const slot of SLOT_LABELS) {
-    const dataUrl = images[slot.key]
-    if (dataUrl) {
-      folder.file(slot.filename, dataUrlToUint8Array(dataUrl))
-    }
+function addProductToZip(product: Product, zip: JSZip): void {
+  const migrated = ensureImages(product)
+  const folder = zip.folder(productFolderName(migrated))
+  if (!folder) return
+
+  const gallery = migrated.gallery ?? []
+  gallery.forEach((img, i) => {
+    const ext = extensionFromMime(img.mimeType)
+    const prefix = String(i + 1).padStart(2, "0")
+    const suffix = i === 0 ? "（サムネ）" : ""
+    folder.file(`${prefix}${suffix}.${ext}`, dataUrlToUint8Array(img.dataUrl))
+  })
+
+  // gallery が空だが imagePreview のみある場合のフォールバック
+  if (gallery.length === 0 && migrated.imagePreview) {
+    folder.file(
+      "01（サムネ）.jpg",
+      dataUrlToUint8Array(migrated.imagePreview),
+    )
   }
 
   if (migrated.captionText) {
@@ -57,32 +68,19 @@ export async function exportProductZip(product: Product): Promise<Blob> {
   }
 
   folder.file("商品情報.txt", buildProductInfoText(migrated))
+}
 
+export async function exportProductZip(product: Product): Promise<Blob> {
+  const zip = new JSZip()
+  addProductToZip(product, zip)
   return zip.generateAsync({ type: "blob" })
 }
 
 export async function exportProductsZip(products: Product[]): Promise<Blob> {
   const zip = new JSZip()
-
   for (const product of products) {
-    const migrated = ensureImages(product)
-    const folder = zip.folder(productFolderName(migrated))!
-
-    const images = migrated.images!
-    for (const slot of SLOT_LABELS) {
-      const dataUrl = images[slot.key]
-      if (dataUrl) {
-        folder.file(slot.filename, dataUrlToUint8Array(dataUrl))
-      }
-    }
-
-    if (migrated.captionText) {
-      folder.file("キャプション.txt", migrated.captionText)
-    }
-
-    folder.file("商品情報.txt", buildProductInfoText(migrated))
+    addProductToZip(product, zip)
   }
-
   return zip.generateAsync({ type: "blob" })
 }
 
