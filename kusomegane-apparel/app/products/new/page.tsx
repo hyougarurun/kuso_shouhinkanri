@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { v4 as uuid } from "uuid"
-import { Step1_Estimate } from "@/components/WizardSteps/Step1_Estimate"
+import { Step1_Image } from "@/components/WizardSteps/Step1_Image"
 import { Step2_Details } from "@/components/WizardSteps/Step2_Details"
 import { Step3_Complete } from "@/components/WizardSteps/Step3_Complete"
 import {
@@ -16,7 +16,7 @@ import {
 import { storage } from "@/lib/storage"
 import { getNextBaseNumber, assignProductNumbers } from "@/lib/productNumber"
 
-const STEP_LABELS = ["加工費推測", "登録情報", "登録完了"]
+const STEP_LABELS = ["画像アップロード", "登録情報", "登録完了"]
 
 export default function NewProductPage() {
   const router = useRouter()
@@ -66,19 +66,6 @@ export default function NewProductPage() {
     state.basic.colors.length > 0 ? state.basic.colors : ["-"],
   )
 
-  // Step 1 → Step 2 へ進むときボディ型番を basic に引き継ぎ
-  function nextFromStep1() {
-    setState((s) => {
-      const nextBasic = { ...s.basic }
-      if (!nextBasic.bodyModelNumber && s.estimation?.bodyCode) {
-        nextBasic.bodyModelNumber = s.estimation.bodyCode
-      }
-      return { ...s, step: 2, basic: nextBasic }
-    })
-    setErrors([])
-    if (typeof window !== "undefined") window.scrollTo({ top: 0 })
-  }
-
   return (
     <div className="mx-auto max-w-[1200px]">
       <header className="flex items-center justify-between mb-4">
@@ -120,13 +107,9 @@ export default function NewProductPage() {
       {/* 本体 */}
       <div>
         {state.step === 1 && (
-          <Step1_Estimate
+          <Step1_Image
             image={state.image}
-            estimation={state.estimation}
             onImageChange={(image) => setState((s) => ({ ...s, image }))}
-            onEstimationChange={(estimation) =>
-              setState((s) => ({ ...s, estimation }))
-            }
           />
         )}
 
@@ -171,12 +154,10 @@ export default function NewProductPage() {
         {state.step < 3 ? (
           <button
             type="button"
-            onClick={state.step === 1 ? nextFromStep1 : next}
+            onClick={next}
             className="rounded-full bg-black text-white text-xs font-bold px-5 py-2 hover:bg-zinc-800 transition"
           >
-            {state.step === 1 && !state.estimation?.result
-              ? "推定せず次へ →"
-              : "次へ →"}
+            次へ →
           </button>
         ) : (
           <div className="w-12" />
