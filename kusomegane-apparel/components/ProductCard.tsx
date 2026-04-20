@@ -122,22 +122,17 @@ export function ProductCard({ product }: { product: Product }) {
           次: {nextLabel}
         </div>
 
-        {product.images && (() => {
-          const slots = [
-            { key: "processing" as const, label: "加工" },
-            { key: "wearing" as const, label: "着画" },
-            { key: "sizeDetail" as const, label: "サイズ" },
-          ]
-          const thumbs = slots.filter(({ key }) => product.images?.[key])
+        {(() => {
+          const thumbs = (product.gallery ?? []).slice(1, 5) // 2〜5 枚目を小サムネ表示
           if (thumbs.length === 0) return null
           return (
-            <div className="flex gap-1.5 pt-1">
-              {thumbs.map(({ key, label }) => (
+            <div className="flex gap-1.5 pt-1 flex-wrap">
+              {thumbs.map((img) => (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  key={key}
-                  src={product.images![key]!}
-                  alt={label}
+                  key={img.id}
+                  src={img.dataUrl}
+                  alt="thumbnail"
                   draggable={false}
                   className="w-14 h-14 rounded object-cover border border-zinc-200"
                 />

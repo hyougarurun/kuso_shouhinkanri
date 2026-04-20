@@ -3,13 +3,11 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { Product, FlowStep, AssetStatus, ProductImages } from "@/types"
+import { Product, FlowStep, AssetStatus } from "@/types"
 import { storage } from "@/lib/storage"
 import { getProductStatus } from "@/lib/productStatus"
 import { computeSampleCountdown } from "@/lib/sampleCountdown"
-import { getColorStyle } from "@/lib/colorPalette"
 import { duplicateProduct } from "@/lib/productDuplicate"
-import { resizeImage } from "@/lib/imageResize"
 import { ensureImages } from "@/lib/migrateProduct"
 import { exportProductZip, downloadBlob } from "@/lib/exportZip"
 import { StatusBadge } from "@/components/StatusBadge"
@@ -25,7 +23,6 @@ import { ProductInfoTable } from "@/components/ProductInfoTable"
 import { SampleCountdownLabel } from "@/components/SampleCountdown"
 import { DriveStorageSection } from "@/components/DriveStorageSection"
 import { SheetRegistrationSection } from "@/components/SheetRegistrationSection"
-import { ImageSlots, SlotKey } from "@/components/ImageSlots"
 import { GallerySection } from "@/components/GallerySection"
 
 function isBooleanKey(k: AssetKey): k is BooleanAssetKey {
@@ -102,64 +99,6 @@ export default function ProductDetailPage() {
     router.push(`/products/${dup.id}`)
   }
 
-  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!product) return
-    const file = e.target.files?.[0]
-    if (!file) return
-    try {
-      const resized = await resizeImage(file)
-      const images: ProductImages = product.images ?? {
-        composite: null,
-        processing: null,
-        wearing: null,
-        sizeDetail: null,
-      }
-      update({
-        ...product,
-        imagePreview: resized.dataUrl,
-        images: { ...images, composite: resized.dataUrl },
-      })
-    } catch {
-      // 画像読み込み失敗は無視
-    }
-  }
-
-  async function handleSlotUpload(key: SlotKey, file: File) {
-    if (!product) return
-    try {
-      const resized = await resizeImage(file)
-      const images: ProductImages = product.images ?? {
-        composite: null,
-        processing: null,
-        wearing: null,
-        sizeDetail: null,
-      }
-      const next: Product = {
-        ...product,
-        images: { ...images, [key]: resized.dataUrl },
-      }
-      // composite スロット更新時は imagePreview も同期
-      if (key === "composite") {
-        next.imagePreview = resized.dataUrl
-      }
-      update(next)
-    } catch {
-      // 画像読み込み失敗は無視
-    }
-  }
-
-  function handleSlotDelete(key: SlotKey) {
-    if (!product || !product.images) return
-    const next: Product = {
-      ...product,
-      images: { ...product.images, [key]: null },
-    }
-    if (key === "composite") {
-      next.imagePreview = null
-    }
-    update(next)
-  }
-
   async function handleDownloadZip() {
     if (!product) return
     try {
@@ -197,72 +136,35 @@ export default function ProductDetailPage() {
   }
 
   const status = getProductStatus(product)
-  const colorStyle = getColorStyle(product.colors[0])
   const step5Done = product.steps.find((s) => s.stepNumber === 5)?.status === "done"
 
   return (
-    <div>
-      {/* ヒーロー画像 */}
-      <div
-        className="relative h-[200px] w-full"
-        style={{ backgroundColor: colorStyle.bg, color: colorStyle.fg }}
-      >
-        {product.imagePreview ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={product.imagePreview}
-            alt={product.name}
-            className="w-full h-full object-contain"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-xs opacity-70">
-            No Image
-          </div>
-        )}
-        <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
-          <Link
-            href="/"
-            className="rounded-full bg-white/90 text-black text-[11px] font-bold px-2.5 py-1"
-          >
-            ← 戻る
-          </Link>
+    <div className="mx-auto max-w-[1200px] px-4 py-3 space-y-4">
+      {/* コンパクトヘッダー: 戻る + No. + 名前 + ステータス */}
+      <header className="flex items-center gap-3">
+        <Link
+          href="/"
+          className="text-xs text-zinc-500 hover:text-zinc-900 shrink-0"
+        >
+          ← 戻る
+        </Link>
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="text-[11px] font-bold text-zinc-500 shrink-0">
+            No.{product.productNumber}
+          </span>
+          <span className="text-sm font-bold text-zinc-900 truncate">
+            {product.name}
+          </span>
+        </div>
+        <div className="ml-auto">
           <StatusBadge status={status} />
         </div>
-        <label className="absolute bottom-2 right-2 rounded-full bg-white/90 text-black text-[10px] font-bold px-2 py-1 cursor-pointer hover:bg-white">
-          📷 画像を変更
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleImageChange}
-          />
-        </label>
-        <div
-          className="absolute bottom-2 left-2 right-16 space-y-0.5"
-          style={{ textShadow: "0 0 3px rgba(0,0,0,0.35)" }}
-        >
-          <div className="text-[11px] opacity-90">No.{product.productNumber}</div>
-          <div className="text-base font-bold leading-tight">{product.name}</div>
-        </div>
-      </div>
+      </header>
 
-      <div className="mx-auto max-w-[1200px] px-4 py-4 space-y-5">
-        {/* クリエイティブ素材: スロット + ギャラリー */}
-        <section className="space-y-2">
-          <h2 className="text-[11px] font-bold text-zinc-500 px-1">
-            クリエイティブ素材
-          </h2>
-          {product.images && (
-            <div className="bg-white rounded-lg shadow-sm p-3">
-              <ImageSlots
-                images={product.images}
-                onUpload={handleSlotUpload}
-                onDelete={handleSlotDelete}
-              />
-            </div>
-          )}
-          <GallerySection product={product} onUpdate={update} />
-        </section>
+      {/* クリエイティブ素材: Gallery のみ */}
+      <section>
+        <GallerySection product={product} onUpdate={update} />
+      </section>
 
         {/* カウントダウン */}
         {!step5Done && countdown && (
@@ -340,7 +242,6 @@ export default function ProductDetailPage() {
             この商品を削除する
           </button>
         </section>
-      </div>
     </div>
   )
 }
