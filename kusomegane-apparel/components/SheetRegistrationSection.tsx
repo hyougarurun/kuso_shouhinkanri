@@ -11,18 +11,19 @@ type Props = {
 type RegisterResponse = {
   rowNumber: number
   mode: "append" | "update"
+  sheetName: string
 }
 
 export function SheetRegistrationSection({ product, onUpdate }: Props) {
   const registered = !!product.sheetRegisteredAt
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [lastMode, setLastMode] = useState<"append" | "update" | null>(null)
+  const [lastResult, setLastResult] = useState<RegisterResponse | null>(null)
 
   async function register() {
     setLoading(true)
     setError(null)
-    setLastMode(null)
+    setLastResult(null)
     try {
       const res = await fetch("/api/sheets/register", {
         method: "POST",
@@ -44,7 +45,7 @@ export function SheetRegistrationSection({ product, onUpdate }: Props) {
         sheetRowNumber: data.rowNumber,
         updatedAt: now,
       })
-      setLastMode(data.mode)
+      setLastResult(data)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -60,7 +61,7 @@ export function SheetRegistrationSection({ product, onUpdate }: Props) {
       sheetRowNumber: undefined,
       updatedAt: new Date().toISOString(),
     })
-    setLastMode(null)
+    setLastResult(null)
   }
 
   return (
@@ -69,8 +70,8 @@ export function SheetRegistrationSection({ product, onUpdate }: Props) {
         <div>
           <h2 className="text-sm font-bold">ASTORE シート登録</h2>
           <p className="text-[10px] text-zinc-500 mt-0.5">
-            「リスト1」シートに 8 列（商品 / 商品番号 / 色 / サイズ / 加工 /
-            ボディ型番 / デザインファイル / 備考）を追記 or 上書き
+            「商品管理」シート（自動作成）に 8 列（商品 / 商品番号 / 色 / サイズ /
+            加工 / ボディ型番 / デザインファイル / 備考）を追記 or 上書き
           </p>
         </div>
         {registered && (
@@ -112,7 +113,7 @@ export function SheetRegistrationSection({ product, onUpdate }: Props) {
           disabled={loading}
           className="w-full rounded-md bg-brand-yellow text-black text-sm font-bold py-2.5 hover:brightness-95 disabled:opacity-50 transition"
         >
-          {loading ? "登録中…" : "リスト1 シートに登録する"}
+          {loading ? "登録中…" : "商品管理 シートに登録する"}
         </button>
       )}
 
@@ -122,9 +123,10 @@ export function SheetRegistrationSection({ product, onUpdate }: Props) {
         </div>
       )}
 
-      {lastMode && (
+      {lastResult && (
         <div className="text-[10px] text-green-700">
-          ✓ {lastMode === "append" ? "新規追加しました" : "既存行を上書きしました"}
+          ✓ シート「{lastResult.sheetName}」に
+          {lastResult.mode === "append" ? "新規追加しました" : "既存行を上書きしました"}
         </div>
       )}
     </section>

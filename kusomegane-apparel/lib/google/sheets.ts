@@ -4,17 +4,29 @@ import type { Product } from "@/types"
 import { createOAuth2Client } from "./auth"
 
 const SPREADSHEET_ID_ENV = "GOOGLE_SHEETS_SPREADSHEET_ID"
-const SHEET_TAB_NAME = "リスト1"
+const SHEET_NAME_ENV = "GOOGLE_SHEETS_TARGET_SHEET_NAME"
+const DEFAULT_SHEET_NAME = "商品管理"
+
+const HEADER_ROW = [
+  "商品",
+  "商品番号",
+  "色",
+  "サイズ",
+  "加工",
+  "ボディ型番",
+  "デザインファイル",
+  "備考",
+]
 
 export type RegisterResult = {
   rowNumber: number
   mode: "append" | "update"
+  sheetName: string
 }
 
 /**
- * Product → リスト1 の 1 行（A〜H 列）へマッピング。
- * A 列（商品画像）は空欄。将来 Drive にアップ済みの合成画像を
- * =IMAGE("drive link") で埋める想定。
+ * Product → シート 1 行（A〜H）へマッピング。
+ * A 列（商品画像）は空欄。Phase 2 で =IMAGE() や埋め込み対応予定。
  */
 export function buildRowValues(product: Product): string[] {
   return [
@@ -39,21 +51,67 @@ function requireSpreadsheetId(): string {
   return id
 }
 
+/** ターゲットシート名（環境変数で上書き可、デフォルト「商品管理」） */
+export function getTargetSheetName(): string {
+  const name = process.env[SHEET_NAME_ENV]
+  return name && name.trim().length > 0 ? name.trim() : DEFAULT_SHEET_NAME
+}
+
+/** シート名を range 内で安全に使うための quote（シングルクォートは倍加） */
+function quoteSheetName(name: string): string {
+  return `'${name.replace(/'/g, "''")}'`
+}
+
 /**
- * B 列（商品番号）を頭から走査して一致行を返す。
- * 見つからなければ null（未登録扱い）。
+ * ターゲットシートが無ければ作成してヘッダー行を書き込む。
+ * 既にあれば何もしない。
+ */
+async function ensureSheetWithHeader(
+  client: ReturnType<typeof sheetsClient>,
+  spreadsheetId: string,
+  sheetName: string,
+): Promise<void> {
+  const meta = await client.spreadsheets.get({ spreadsheetId })
+  const exists = meta.data.sheets?.some(
+    (s) => s.properties?.title === sheetName,
+  )
+  if (exists) return
+
+  // 新規シート作成
+  await client.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [
+        { addSheet: { properties: { title: sheetName } } },
+      ],
+    },
+  })
+
+  // ヘッダー行（A1:H1）
+  await client.spreadsheets.values.update({
+    spreadsheetId,
+    range: `${quoteSheetName(sheetName)}!A1:H1`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: [HEADER_ROW] },
+  })
+}
+
+/**
+ * B 列（商品番号）を走査して一致行を返す。1 行目はヘッダーなのでスキップ。
  */
 async function findExistingRow(
   client: ReturnType<typeof sheetsClient>,
   spreadsheetId: string,
+  sheetName: string,
   productNumber: string,
 ): Promise<number | null> {
   const res = await client.spreadsheets.values.get({
     spreadsheetId,
-    range: `${SHEET_TAB_NAME}!B:B`,
+    range: `${quoteSheetName(sheetName)}!B:B`,
   })
   const values = res.data.values ?? []
-  for (let i = 0; i < values.length; i++) {
+  // i=0 はヘッダー（"商品番号"）
+  for (let i = 1; i < values.length; i++) {
     const cell = values[i]?.[0]
     if (cell === productNumber) return i + 1 // Sheets は 1-indexed
   }
@@ -61,36 +119,42 @@ async function findExistingRow(
 }
 
 /**
- * 商品を ASTORE シートの「リスト1」タブに登録する。
- * 同じ B 列（商品番号）の行が既にあれば UPDATE、無ければ末尾に APPEND。
+ * 商品をターゲットシート（デフォルト「商品管理」）に登録する。
+ * - シートが無ければ作成してヘッダー付与
+ * - 同じ B 列（商品番号）の行が既にあれば UPDATE
+ * - 無ければ末尾に APPEND
  */
-export async function registerProductToList1(
+export async function registerProductToSheet(
   product: Product,
   auth?: OAuth2Client,
 ): Promise<RegisterResult> {
   const spreadsheetId = requireSpreadsheetId()
+  const sheetName = getTargetSheetName()
   const client = sheetsClient(auth ?? createOAuth2Client())
-  const row = buildRowValues(product)
 
+  await ensureSheetWithHeader(client, spreadsheetId, sheetName)
+
+  const row = buildRowValues(product)
   const existing = await findExistingRow(
     client,
     spreadsheetId,
+    sheetName,
     product.productNumber,
   )
 
   if (existing) {
     await client.spreadsheets.values.update({
       spreadsheetId,
-      range: `${SHEET_TAB_NAME}!A${existing}:H${existing}`,
+      range: `${quoteSheetName(sheetName)}!A${existing}:H${existing}`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values: [row] },
     })
-    return { rowNumber: existing, mode: "update" }
+    return { rowNumber: existing, mode: "update", sheetName }
   }
 
   const appendRes = await client.spreadsheets.values.append({
     spreadsheetId,
-    range: `${SHEET_TAB_NAME}!A:H`,
+    range: `${quoteSheetName(sheetName)}!A:H`,
     valueInputOption: "USER_ENTERED",
     insertDataOption: "INSERT_ROWS",
     requestBody: { values: [row] },
@@ -98,5 +162,8 @@ export async function registerProductToList1(
   const updatedRange = appendRes.data.updates?.updatedRange ?? ""
   const match = updatedRange.match(/!A(\d+)/)
   const rowNumber = match ? parseInt(match[1], 10) : 0
-  return { rowNumber, mode: "append" }
+  return { rowNumber, mode: "append", sheetName }
 }
+
+// 後方互換: 旧名からの alias
+export const registerProductToList1 = registerProductToSheet
