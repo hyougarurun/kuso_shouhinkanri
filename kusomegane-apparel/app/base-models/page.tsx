@@ -94,9 +94,9 @@ export default function BaseModelsPage() {
     <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-bold">base モデル画像</h2>
+          <h2 className="text-lg font-bold">モデル画像</h2>
           <p className="text-xs text-zinc-500 mt-0.5">
-            プレーン服の base モデル（着画生成の素材）
+            着画生成・デザイン検証のための画像アセット
           </p>
         </div>
         <button
@@ -160,7 +160,7 @@ export default function BaseModelsPage() {
         <div className="text-center text-sm text-zinc-500 py-10">読み込み中...</div>
       ) : models.length === 0 ? (
         <div className="text-center text-sm text-zinc-500 py-10">
-          base モデルが登録されていません。「+ 画像登録」から追加してください。
+          モデル画像が登録されていません。「+ 画像登録」から追加してください。
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -199,11 +199,6 @@ export default function BaseModelsPage() {
                 >
                   ★
                 </button>
-                {m.variantLabel && (
-                  <span className="absolute top-1 left-1 bg-white/90 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">
-                    {m.variantLabel}
-                  </span>
-                )}
                 {m.parentId && (
                   <span
                     className="absolute bottom-1 left-1 bg-amber-400/90 text-black text-[9px] font-bold px-1.5 py-0.5 rounded"

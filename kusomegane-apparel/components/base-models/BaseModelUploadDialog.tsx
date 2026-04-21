@@ -146,7 +146,7 @@ export function BaseModelUploadDialog({ open, onClose, onUploaded }: Props) {
         className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto outline-none"
       >
         <div className="flex justify-between items-start mb-4">
-          <h3 className="text-lg font-bold">base モデル登録</h3>
+          <h3 className="text-lg font-bold">モデル画像を登録</h3>
           <button onClick={onClose} className="text-zinc-500 hover:text-zinc-700 text-xl leading-none">
             ×
           </button>
