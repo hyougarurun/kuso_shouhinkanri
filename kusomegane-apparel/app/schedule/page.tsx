@@ -5,6 +5,7 @@ import { Product } from "@/types"
 import { storage } from "@/lib/storage"
 import { ensureImages } from "@/lib/migrateProduct"
 import { ScheduleBoard } from "@/components/schedule/ScheduleBoard"
+import { MonthShowcase } from "@/components/schedule/MonthShowcase"
 
 export default function SchedulePage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -47,7 +48,10 @@ export default function SchedulePage() {
           商品がまだありません。ホームから新規登録してください。
         </div>
       ) : (
-        <ScheduleBoard products={products} onUpdateProducts={setProducts} />
+        <>
+          <ScheduleBoard products={products} onUpdateProducts={setProducts} />
+          <MonthShowcase products={products} />
+        </>
       )}
     </div>
   )
