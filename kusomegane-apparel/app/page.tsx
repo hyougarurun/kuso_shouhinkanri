@@ -10,15 +10,18 @@ import {
   FilterValue,
 } from "@/lib/productStatus"
 import { ensureImages } from "@/lib/migrateProduct"
+import { productsForMonth, unassignedProducts } from "@/lib/schedule"
 import { exportProductsZip, downloadBlob } from "@/lib/exportZip"
 import { ProductCard } from "@/components/ProductCard"
 import { Summary } from "@/components/Summary"
 import { FilterTabs } from "@/components/FilterTabs"
+import { MonthFilter, MONTH_FILTER_UNASSIGNED } from "@/components/MonthFilter"
 import { QuickEstimateCard } from "@/components/QuickEstimateCard"
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([])
   const [filter, setFilter] = useState<FilterValue>("all")
+  const [monthFilter, setMonthFilter] = useState<string | null>(null)
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
@@ -29,7 +32,12 @@ export default function Home() {
   }, [])
 
   const summary = summarize(products)
-  const visible = filterProducts(products, filter)
+  const byStatus = filterProducts(products, filter)
+  const visible = !monthFilter
+    ? byStatus
+    : monthFilter === MONTH_FILTER_UNASSIGNED
+      ? unassignedProducts(byStatus)
+      : productsForMonth(byStatus, monthFilter)
 
   async function handleBulkDownload() {
     if (products.length === 0) return
@@ -71,8 +79,9 @@ export default function Home() {
           done={summary.done}
         />
 
-        <div className="mt-4 mb-4">
+        <div className="mt-4 mb-4 flex items-center gap-3 flex-wrap">
           <FilterTabs value={filter} onChange={setFilter} />
+          <MonthFilter value={monthFilter} onChange={setMonthFilter} />
         </div>
 
         {!hydrated ? (
@@ -92,9 +101,11 @@ export default function Home() {
         )}
       </section>
 
-      {/* 右: 加工費推定 */}
+      {/* 右: 加工費推定（スクロール追従） */}
       <aside className="col-span-1">
-        <QuickEstimateCard onRegistered={handleEstimateRegistered} />
+        <div className="sticky top-4">
+          <QuickEstimateCard onRegistered={handleEstimateRegistered} />
+        </div>
       </aside>
     </div>
   )
