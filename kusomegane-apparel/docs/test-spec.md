@@ -13,7 +13,8 @@
 | G. 商品複製 | 6 | 6 | 0 |
 | H. 画像マイグレーション | 4 | 4 | 0 |
 | I. ZIPエクスポート | 4 | 4 | 0 |
-| **合計** | **45** | **45** | **0** |
+| J. BaseModel serialize | 6 | 0 | 0 |
+| **合計** | **51** | **45** | **0** |
 
 ## H. 画像マイグレーション（Phase 0.7）
 
@@ -58,3 +59,35 @@
 - **ファイル**: `__tests__/exportZip.test.ts`
 - **優先度**: P1
 - **期待結果**: 長さ0のUint8Arrayを返す
+
+## J. BaseModel serialize/parse（Phase 1.4a）
+
+### TC-BM-001: serializeBaseModel 全フィールドを Row 形式に変換
+- **ファイル**: `__tests__/baseModelSerialize.test.ts`
+- **優先度**: P0
+- **期待結果**: camelCase → snake_case 変換、optional 値は null に
+
+### TC-BM-002: serializeBaseModel sizeBytes / width / height undefined → null
+- **ファイル**: `__tests__/baseModelSerialize.test.ts`
+- **優先度**: P0
+- **期待結果**: undefined は null に正規化
+
+### TC-BM-003: parseBaseModel Row → BaseModel 変換
+- **ファイル**: `__tests__/baseModelSerialize.test.ts`
+- **優先度**: P0
+- **期待結果**: snake_case → camelCase、null は undefined に
+
+### TC-BM-004: parseBaseModel null フィールドの取り扱い
+- **ファイル**: `__tests__/baseModelSerialize.test.ts`
+- **優先度**: P0
+- **期待結果**: size_bytes/width/height が null の場合 undefined になる
+
+### TC-BM-005: buildBaseModelStoragePath フォーマット
+- **ファイル**: `__tests__/baseModelSerialize.test.ts`
+- **優先度**: P0
+- **期待結果**: `base-models/<id>.<ext>` 形式、拡張子の `.` は除去、小文字化
+
+### TC-BM-006: buildBaseModelStoragePath 大文字拡張子
+- **ファイル**: `__tests__/baseModelSerialize.test.ts`
+- **優先度**: P1
+- **期待結果**: 拡張子が大文字でも小文字に正規化

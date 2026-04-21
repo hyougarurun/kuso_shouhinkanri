@@ -131,3 +131,29 @@ export interface SampleCountdown {
   daysLeft: number
   color: CountdownColor
 }
+
+export type BaseModelGender = "male" | "female"
+export type BaseModelPose = "front" | "back"
+export type BaseModelGarmentType = "crewneck" | "hoodie" | "tshirt" | "longsleeve"
+
+export interface BaseModel {
+  id: string
+  gender: BaseModelGender
+  pose: BaseModelPose
+  garmentType: BaseModelGarmentType
+  garmentColor: string
+  backgroundColor: string
+  variantLabel: string
+  storagePath: string
+  bucket: string
+  mimeType: string
+  sizeBytes?: number
+  width?: number
+  height?: number
+  isFavorite: boolean
+  notes: string
+  sourcePrompt: string
+  sourceModel: string
+  createdAt: string
+  updatedAt: string
+}

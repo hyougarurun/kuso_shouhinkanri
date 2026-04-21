@@ -4,12 +4,22 @@
  * 将来は `supabase gen types typescript --linked` で自動生成に置き換える。
  */
 
-import type { AssetStatus, StepStatus } from "@/types"
+import type {
+  AssetStatus,
+  BaseModelGarmentType,
+  BaseModelGender,
+  BaseModelPose,
+  StepStatus,
+} from "@/types"
 
 export type StepStatusDB = StepStatus
 export type ImageSlotDB = "composite" | "processing" | "wearing" | "sizeDetail"
 
-export interface ProductAssetsJSON {
+export type BaseModelGenderDB = BaseModelGender
+export type BaseModelPoseDB = BaseModelPose
+export type BaseModelGarmentTypeDB = BaseModelGarmentType
+
+export type ProductAssetsJSON = {
   compositeImage: AssetStatus
   processingImage: AssetStatus
   aiWearingImage: AssetStatus
@@ -17,7 +27,7 @@ export interface ProductAssetsJSON {
   captionDone: boolean
 }
 
-export interface ProductEstimationJSON {
+export type ProductEstimationJSON = {
   bodyCode: string
   color?: string
   location: string
@@ -31,7 +41,7 @@ export interface ProductEstimationJSON {
   estimatedAt: string
 }
 
-export interface ProductRow {
+export type ProductRow = {
   id: string
   product_number: string
   base_product_number: number
@@ -72,7 +82,7 @@ export interface ProductRow {
   updated_at: string
 }
 
-export interface ProductStepRow {
+export type ProductStepRow = {
   id: string
   product_id: string
   step_number: number
@@ -81,7 +91,7 @@ export interface ProductStepRow {
   notes: string
 }
 
-export interface ProductImageRow {
+export type ProductImageRow = {
   id: string
   product_id: string
   slot: ImageSlotDB
@@ -94,7 +104,7 @@ export interface ProductImageRow {
   created_at: string
 }
 
-export interface ProductDriveFileRow {
+export type ProductDriveFileRow = {
   id: string
   product_id: string
   drive_file_id: string
@@ -105,7 +115,32 @@ export interface ProductDriveFileRow {
   uploaded_at: string
 }
 
-export interface Database {
+export type BaseModelRow = {
+  id: string
+  gender: BaseModelGenderDB
+  pose: BaseModelPoseDB
+  garment_type: BaseModelGarmentTypeDB
+  garment_color: string
+  background_color: string
+  variant_label: string
+  storage_path: string
+  bucket: string
+  mime_type: string
+  size_bytes: number | null
+  width: number | null
+  height: number | null
+  is_favorite: boolean
+  notes: string
+  source_prompt: string
+  source_model: string
+  created_at: string
+  updated_at: string
+}
+
+export type Database = {
+  __InternalSupabase: {
+    PostgrestVersion: "12"
+  }
   public: {
     Tables: {
       products: {
@@ -115,11 +150,13 @@ export interface Database {
           updated_at?: string
         }
         Update: Partial<ProductRow>
+        Relationships: []
       }
       product_steps: {
         Row: ProductStepRow
         Insert: Omit<ProductStepRow, "id"> & { id?: string }
         Update: Partial<ProductStepRow>
+        Relationships: []
       }
       product_images: {
         Row: ProductImageRow
@@ -128,6 +165,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<ProductImageRow>
+        Relationships: []
       }
       product_drive_files: {
         Row: ProductDriveFileRow
@@ -136,7 +174,20 @@ export interface Database {
           uploaded_at?: string
         }
         Update: Partial<ProductDriveFileRow>
+        Relationships: []
+      }
+      base_models: {
+        Row: BaseModelRow
+        Insert: Omit<BaseModelRow, "id" | "created_at" | "updated_at"> & {
+          id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<BaseModelRow>
+        Relationships: []
       }
     }
+    Views: Record<string, never>
+    Functions: Record<string, never>
   }
 }

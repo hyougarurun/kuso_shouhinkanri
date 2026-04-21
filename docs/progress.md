@@ -1,14 +1,13 @@
 # 作業進捗
 
 ## 現在の作業
-- 機能: **Phase 1（Supabase + Drive + Sheets 統合）実質完了（2026-04-20）**
-- 状態: 1.1〜1.3 動作確認済み、1.4（fal.ai + Vercel）は後回し可
+- 機能: **Phase 1.4a（base モデル画像基盤）実装完了（2026-04-21）**
+- 状態: `/base-models` ページ + Supabase Storage `base-models` バケット + API 一式 稼働中。実画像アップロード待ち
 - リポジトリ: https://github.com/hyougarurun/kuso_shouhinkanri
-- ブランチ: `feature/print-cost-poc`（最新 commit: 93fca6a）
 - 次にやること:
-  1. `feature/print-cost-poc` を `main` にマージするか判断（PR 作成）
-  2. 必要なら Phase 1.4（fal.ai 着画生成 + Vercel デプロイ）着手
-  3. k2 の本格運用開始、フィードバック収集
+  1. k2 が `docs/design-notes/phase1.4a-prompts.md` の 10 プロンプトで画像生成（Nano Banana Pro 想定）
+  2. `/base-models` に 10 枚アップロード → 採用判定（お気に入り ★）
+  3. 採用画像で Phase 1.4b（Kling VTON）着手判断
 - 完了した Phase 1:
   - **1.1 Supabase 基盤**: DB スキーマ 4 テーブル適用済、lib/supabase/* 実装 + 6 テスト PASS
   - **1.2 Drive 連携**: /api/drive/folder/ensure + /api/drive/upload、商品番号フォルダ自動作成、全形式 100MB まで
@@ -82,6 +81,7 @@
 - PoC-P9: 精度検証（MAPE < 20% 目標）
 
 ## 直近の完了タスク
+- 2026-04-21 **Phase 1.4a 完了**: base モデル画像基盤。Supabase `base_models` テーブル + Storage バケット（非公開、Signed URL 配信）、`/api/base-models/*`（upload/list/patch/delete）、`/base-models` グリッド UI + アップロードダイアログ + フィルタ（性別・ポーズ・服種・★）+ Sidebar 導線。10 プロンプトドラフト（`docs/design-notes/phase1.4a-prompts.md`）。TS/vitest 76/76 PASS。db push 適用済
 - 2026-04-20 **Phase 1.1-1.3 完全動作確認**: Supabase DB push 済、Drive フォルダ自動作成+ファイルアップ、Sheets 新規タブ「商品管理」に 8 列自動追記 + A 列に合成画像埋め込み（=IMAGE() + Drive 公開 URL）。60/60 テスト PASS
   - commit: 2ea3010, b00c90f, 41f1b0e, 4489db0, 93fca6a
 - 2026-04-18 **PoC-C1 完了**: 画像アップロード → Claude Vision で加工箇所自動判定。`/api/analyze-image` + 画像アップロード UI 実装。kusomegane-char.png でテスト時、アパレル判定のgraceful fallbackを確認
