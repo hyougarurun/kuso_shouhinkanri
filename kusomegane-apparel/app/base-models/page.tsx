@@ -90,14 +90,6 @@ export default function BaseModelsPage() {
     if (res.ok) refresh()
   }
 
-  function download(m: BaseModelWithUrl) {
-    const a = document.createElement("a")
-    a.href = m.signedUrl
-    const ext = m.storagePath.split(".").pop() ?? "png"
-    a.download = `${m.variantLabel || m.id.slice(0, 8)}.${ext}`
-    a.click()
-  }
-
   return (
     <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between mb-4">
@@ -246,12 +238,15 @@ export default function BaseModelsPage() {
                   >
                     🎨 派生
                   </button>
-                  <button
-                    onClick={() => download(m)}
-                    className="text-[10px] bg-zinc-100 hover:bg-zinc-200 rounded px-2 py-1 font-semibold text-zinc-700"
+                  <a
+                    href={m.signedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] bg-zinc-100 hover:bg-zinc-200 rounded px-2 py-1 font-semibold text-zinc-700 inline-flex items-center"
+                    title="新規タブで開く（右クリック/⌘S で保存）"
                   >
                     DL
-                  </button>
+                  </a>
                   <button
                     onClick={() => deleteModel(m)}
                     className="text-[10px] bg-red-50 hover:bg-red-100 rounded px-2 py-1 font-semibold text-red-600"
