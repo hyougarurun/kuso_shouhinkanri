@@ -9,6 +9,7 @@ import type {
 } from "@/types"
 import { BaseModelUploadDialog } from "@/components/base-models/BaseModelUploadDialog"
 import { GenerateVariationDialog } from "@/components/base-models/GenerateVariationDialog"
+import { CompositeDialog } from "@/components/base-models/CompositeDialog"
 
 interface BaseModelWithUrl extends BaseModel {
   signedUrl: string
@@ -31,6 +32,7 @@ export default function BaseModelsPage() {
   const [error, setError] = useState<string | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
   const [variationTarget, setVariationTarget] = useState<BaseModelWithUrl | null>(null)
+  const [compositeTarget, setCompositeTarget] = useState<BaseModelWithUrl | null>(null)
   const [genderFilter, setGenderFilter] = useState<GenderFilter>("all")
   const [poseFilter, setPoseFilter] = useState<PoseFilter>("all")
   const [garmentFilter, setGarmentFilter] = useState<GarmentFilter>("all")
@@ -226,13 +228,20 @@ export default function BaseModelsPage() {
                     {[m.garmentColor, m.backgroundColor].filter(Boolean).join(" / ")}
                   </div>
                 )}
-                <div className="flex gap-1 mt-1">
+                <div className="flex gap-1 mt-1 flex-wrap">
                   <button
                     onClick={() => setVariationTarget(m)}
                     className="flex-1 text-[10px] bg-amber-100 hover:bg-amber-200 rounded px-2 py-1 font-semibold text-amber-900"
-                    title="派生バリエーション生成"
+                    title="服種の派生バリエーション生成"
                   >
                     🎨 派生
+                  </button>
+                  <button
+                    onClick={() => setCompositeTarget(m)}
+                    className="flex-1 text-[10px] bg-indigo-100 hover:bg-indigo-200 rounded px-2 py-1 font-semibold text-indigo-900"
+                    title="デザイン画像を合成"
+                  >
+                    🖼 合成
                   </button>
                   <button
                     onClick={() => download(m)}
@@ -266,6 +275,15 @@ export default function BaseModelsPage() {
         parentLabel={variationTarget?.variantLabel}
         parentGarment={variationTarget?.garmentType}
         onClose={() => setVariationTarget(null)}
+        onGenerated={refresh}
+      />
+
+      <CompositeDialog
+        open={!!compositeTarget}
+        baseModelId={compositeTarget?.id ?? null}
+        baseThumbUrl={compositeTarget?.signedUrl}
+        baseLabel={compositeTarget?.variantLabel}
+        onClose={() => setCompositeTarget(null)}
         onGenerated={refresh}
       />
     </div>

@@ -8,7 +8,7 @@
   1. k2 が https://console.cloud.google.com/billing で Gemini プロジェクトの課金有効化
   2. `/base-models` で 1 枚「🎨 派生」→ Tシャツで試験 → 品質確認
   3. 品質 OK なら 17 枚 × 4 服種 = 68 枚の派生生成（~$2.65）
-  4. **（保留）Phase 1.4c 合成画像**: 設計完了 `docs/design-notes/phase1.4c-composite.md`。k2 の合図で再開
+  4. **Phase 1.4c 合成画像 実装完了**（2026-04-21）: ベース画像 + デザイン画像（paste/DnD/picker） → Gemini 多画像入力で合成。配置 4 種（胸中央/左胸/背面/袖）× サイズ 3 段階（小/中/大）+ 追加指示。派生と同じ `parent_id` 系譜で管理
 - 完了した Phase 1:
   - **1.1 Supabase 基盤**: DB スキーマ 4 テーブル適用済、lib/supabase/* 実装 + 6 テスト PASS
   - **1.2 Drive 連携**: /api/drive/folder/ensure + /api/drive/upload、商品番号フォルダ自動作成、全形式 100MB まで

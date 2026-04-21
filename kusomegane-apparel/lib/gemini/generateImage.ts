@@ -24,6 +24,14 @@ export interface GenerateImageInput {
   sourceImage: ArrayBuffer | Buffer
   /** 編集元画像の MIME（image/png 等） */
   sourceMimeType: string
+  /**
+   * 追加参照画像（任意）。合成/差分指定 等で 2 枚目以降を渡す用途。
+   * 順序はプロンプト内での参照順（Image 1=sourceImage, Image 2=extraImages[0], ...）。
+   */
+  extraImages?: Array<{
+    buffer: ArrayBuffer | Buffer
+    mimeType: string
+  }>
   /** 編集指示プロンプト */
   prompt: string
   /** 上書き用モデル名（既定: gemini-2.5-flash-image） */
@@ -59,20 +67,29 @@ export async function generateImage(
   const model = input.model ?? DEFAULT_MODEL
   const url = `${ENDPOINT_BASE}/${model}:generateContent`
 
-  const body = {
-    contents: [
-      {
-        parts: [
-          { text: input.prompt },
-          {
-            inlineData: {
-              mimeType: input.sourceMimeType,
-              data: bufferToBase64(input.sourceImage),
-            },
-          },
-        ],
+  const requestParts: Array<
+    | { text: string }
+    | { inlineData: { mimeType: string; data: string } }
+  > = [
+    { text: input.prompt },
+    {
+      inlineData: {
+        mimeType: input.sourceMimeType,
+        data: bufferToBase64(input.sourceImage),
       },
-    ],
+    },
+  ]
+  for (const extra of input.extraImages ?? []) {
+    requestParts.push({
+      inlineData: {
+        mimeType: extra.mimeType,
+        data: bufferToBase64(extra.buffer),
+      },
+    })
+  }
+
+  const body = {
+    contents: [{ parts: requestParts }],
     generationConfig: {
       // 画像生成モデルは responseModalities で IMAGE を要求する
       responseModalities: ["IMAGE"],
@@ -120,6 +137,53 @@ export async function generateImage(
     model,
     text: textPart?.text,
   }
+}
+
+export type CompositeLocation =
+  | "front-center"
+  | "front-left-chest"
+  | "back-center"
+  | "sleeve"
+export type CompositeSize = "small" | "medium" | "large"
+
+/**
+ * 合成画像生成用プロンプトを組み立てる。
+ * Image 1 = base（モデル着用画像）、Image 2 = デザインアートワーク。
+ */
+export function buildCompositePrompt(opts: {
+  location: CompositeLocation
+  size: CompositeSize
+  additionalPrompt?: string
+}): string {
+  const locLabels: Record<CompositeLocation, string> = {
+    "front-center": "center of the front/chest area",
+    "front-left-chest": "left chest (small wappen-style placement)",
+    "back-center": "center of the back panel (large print area)",
+    sleeve: "upper sleeve",
+  }
+  const sizeLabels: Record<CompositeSize, string> = {
+    small: "small (wappen / pocket-logo scale, about 8-10 cm wide)",
+    medium: "medium (typical chest graphic scale, about 20-25 cm wide)",
+    large: "large (full back-print scale, about 35-40 cm wide)",
+  }
+
+  const base = [
+    `Image 1 is a photograph of a person wearing a garment.`,
+    `Image 2 is a graphic artwork (logo / print design) to be applied onto the garment in Image 1.`,
+    ``,
+    `Task: produce a single photorealistic image where the artwork from Image 2 is printed on the garment in Image 1 at the ${locLabels[opts.location]}, at ${sizeLabels[opts.size]} scale.`,
+    ``,
+    `CRITICAL requirements:`,
+    `- Preserve EVERYTHING else from Image 1 exactly: the same person (face, hair, body, pose, hands), the same background, the same lighting direction and color temperature, the same camera angle and framing, and the same garment (shape, color, material, wrinkles).`,
+    `- Apply the artwork so it FOLLOWS the garment's fabric: match cloth wrinkles, shadows, and perspective so the print looks naturally printed, not pasted on top.`,
+    `- Keep the artwork's proportions, colors, typography and shapes from Image 2 as faithfully as possible. Do NOT redraw, restyle, or reinterpret the artwork.`,
+    `- If the artwork has a transparent background, only the visible shapes should appear on the garment (no white rectangle).`,
+    `- Output a single high-resolution photorealistic image with the same aspect ratio as Image 1.`,
+  ].join("\n")
+
+  return opts.additionalPrompt
+    ? `${base}\n\nAdditional notes: ${opts.additionalPrompt}`
+    : base
 }
 
 /**
