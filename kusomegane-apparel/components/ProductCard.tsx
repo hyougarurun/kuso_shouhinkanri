@@ -8,7 +8,6 @@ import { SampleCountdownLabel } from "./SampleCountdown"
 import { getProductStatus, getProgress } from "@/lib/productStatus"
 import { getNextActionLabel } from "@/lib/nextAction"
 import { computeSampleCountdown } from "@/lib/sampleCountdown"
-import { getColorStyle } from "@/lib/colorPalette"
 
 export const PRODUCT_DRAG_TYPE = "application/x-kusomegane-product-id"
 
@@ -18,10 +17,10 @@ export function ProductCard({ product }: { product: Product }) {
   const { done, total } = getProgress(product)
   const nextLabel = getNextActionLabel(product)
   const countdown = computeSampleCountdown(product.sampleArrivalDate)
-  const colorStyle = getColorStyle(product.colors[0])
   const step5Done = product.steps.find((s) => s.stepNumber === 5)?.status === "done"
   const hasDrive = (product.driveFiles?.length ?? 0) > 0
   const hasSheet = !!product.sheetRegisteredAt
+  const thumb = product.gallery?.[0]?.dataUrl ?? product.imagePreview
 
   function onDragStart(e: React.DragEvent<HTMLDivElement>) {
     e.dataTransfer.setData(PRODUCT_DRAG_TYPE, product.id)
@@ -30,7 +29,6 @@ export function ProductCard({ product }: { product: Product }) {
   }
 
   function onClick(e: React.MouseEvent) {
-    // ドラッグ中のクリック発火を避ける（簡易的に button 以外はリンク扱い）
     if ((e.target as HTMLElement).closest("button")) return
     router.push(`/products/${product.id}`)
   }
@@ -41,63 +39,36 @@ export function ProductCard({ product }: { product: Product }) {
       onDragStart={onDragStart}
       onClick={onClick}
       className={
-        "block bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer active:cursor-grabbing select-none " +
-        (hasDrive
-          ? "ring-2 ring-lime-400 ring-offset-1"
-          : "")
+        "flex items-center gap-3 bg-white rounded-lg border p-2.5 shadow-sm hover:shadow-md hover:border-zinc-300 transition cursor-pointer active:cursor-grabbing select-none " +
+        (hasDrive ? "border-lime-300 ring-1 ring-lime-300" : "border-zinc-200")
       }
     >
-      {/* 画像エリア */}
-      <div
-        className="relative aspect-square"
-        style={{ backgroundColor: colorStyle.bg, color: colorStyle.fg }}
-      >
-        {product.imagePreview ? (
+      {/* サムネイル + 商品番号 */}
+      <div className="relative w-16 h-16 shrink-0 rounded-md overflow-hidden bg-zinc-100">
+        {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={product.imagePreview}
+            src={thumb}
             alt={product.name}
-            className="w-full h-full object-contain"
             draggable={false}
+            className="w-full h-full object-cover pointer-events-none"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-sm opacity-70">
-            No Image
+          <div className="w-full h-full flex items-center justify-center text-[10px] text-zinc-400">
+            No Img
           </div>
         )}
-
-        {/* 上部オーバーレイ */}
-        <div className="absolute top-1.5 left-1.5 right-1.5 flex items-center justify-between">
-          <span
-            className="px-2 py-0.5 rounded-full text-[11px] font-bold"
-            style={{ backgroundColor: "rgba(255,255,255,0.9)", color: "#111111" }}
-          >
-            No.{product.productNumber}
-          </span>
-          <StatusBadge status={status} />
-        </div>
-
-        {/* 下部進捗バー */}
-        <div className="absolute bottom-1.5 left-1.5 right-1.5">
-          <ProgressBar done={done} total={total} />
-          <div
-            className="mt-1 text-[10px] font-bold"
-            style={{
-              color: colorStyle.fg,
-              textShadow: "0 0 2px rgba(0,0,0,0.3)",
-            }}
-          >
-            {done}/{total}
-          </div>
-        </div>
+        <span className="absolute bottom-0 left-0 right-0 text-[9px] font-bold text-white bg-black/60 px-1 py-0.5 text-center leading-none">
+          No.{product.productNumber}
+        </span>
       </div>
 
-      {/* 下部情報 */}
-      <div className="p-2.5 space-y-1">
-        <div className="flex items-center gap-1.5">
-          <div className="flex-1 text-[13px] font-bold text-zinc-900 leading-tight line-clamp-1">
-            {product.name}
-          </div>
+      {/* 中央: 商品名 / シリーズ・色 / 次アクション */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-1.5 min-w-0">
+          <span className="text-[13px] font-bold text-zinc-900 truncate">
+            {product.name || "（無題）"}
+          </span>
           {hasSheet && (
             <span
               title="シート登録済み"
@@ -108,63 +79,49 @@ export function ProductCard({ product }: { product: Product }) {
           )}
           {hasDrive && (
             <span
-              title={`Drive ${product.driveFiles?.length ?? 0} ファイル格納済み`}
+              title={`Drive ${product.driveFiles?.length ?? 0} ファイル`}
               className="shrink-0 text-[9px] font-bold text-lime-800 bg-lime-50 border border-lime-300 rounded px-1 py-0.5"
             >
               Drive {product.driveFiles?.length}
             </span>
           )}
         </div>
-        <div className="text-[11px] text-zinc-500 line-clamp-1">
-          {product.series} · {product.colors.join("・")}
+        <div className="text-[11px] text-zinc-500 truncate">
+          {[product.series, product.colors.join("・")].filter(Boolean).join(" · ")}
         </div>
-        <div className="text-[11px] text-zinc-700 line-clamp-1">
+        <div className="text-[11px] text-zinc-700 truncate">
           次: {nextLabel}
         </div>
+      </div>
 
-        {(() => {
-          const thumbs = (product.gallery ?? []).slice(1, 5) // 2〜5 枚目を小サムネ表示
-          if (thumbs.length === 0) return null
-          return (
-            <div className="flex gap-1.5 pt-1 flex-wrap">
-              {thumbs.map((img) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={img.id}
-                  src={img.dataUrl}
-                  alt="thumbnail"
-                  draggable={false}
-                  className="w-14 h-14 rounded object-cover border border-zinc-200"
-                />
-              ))}
-            </div>
-          )
-        })()}
-
-        {product.estimation && (
-          <div className="mt-1.5 rounded-md bg-amber-50 border border-amber-200 px-2 py-1.5">
-            <div className="text-[10px] text-amber-700 leading-none mb-0.5">
-              推定加工費
-            </div>
-            {product.estimation.totalMin !== undefined &&
-            product.estimation.totalMax !== undefined ? (
-              <div className="text-[12px] font-bold text-amber-900">
-                ¥{product.estimation.totalMin.toLocaleString()} 〜 ¥
-                {product.estimation.totalMax.toLocaleString()}
-              </div>
-            ) : (
-              <div className="text-[12px] font-bold text-amber-900">
-                加工費 ¥{product.estimation.subtotalProcessing.toLocaleString()}
-              </div>
-            )}
-            <div className="text-[9px] text-zinc-500 leading-none mt-0.5">
-              {product.estimation.location} / {product.estimation.method}
-            </div>
+      {/* 推定加工費（ある時のみ） */}
+      {product.estimation && (
+        <div className="hidden md:block shrink-0 rounded-md bg-amber-50 border border-amber-200 px-2 py-1 text-center min-w-[96px]">
+          <div className="text-[9px] text-amber-700 leading-none">
+            推定加工費
           </div>
-        )}
+          <div className="text-[11px] font-bold text-amber-900 leading-tight">
+            {product.estimation.totalMin !== undefined &&
+            product.estimation.totalMax !== undefined
+              ? `¥${product.estimation.totalMin.toLocaleString()}〜${product.estimation.totalMax.toLocaleString()}`
+              : `¥${product.estimation.subtotalProcessing.toLocaleString()}`}
+          </div>
+        </div>
+      )}
 
+      {/* ステータス + 進捗 + カウントダウン */}
+      <div className="shrink-0 flex flex-col items-end gap-1 min-w-[110px]">
+        <StatusBadge status={status} />
+        <div className="flex items-center gap-1.5 w-full">
+          <div className="flex-1 min-w-[60px]">
+            <ProgressBar done={done} total={total} />
+          </div>
+          <span className="text-[10px] font-bold text-zinc-700 shrink-0">
+            {done}/{total}
+          </span>
+        </div>
         {!step5Done && countdown && (
-          <div>
+          <div className="scale-90 origin-right">
             <SampleCountdownLabel data={countdown} />
           </div>
         )}

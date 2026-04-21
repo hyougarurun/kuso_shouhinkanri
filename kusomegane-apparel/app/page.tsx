@@ -93,7 +93,7 @@ export default function Home() {
             該当する商品がありません
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-2">
             {visible.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
