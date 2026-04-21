@@ -18,18 +18,53 @@ import { FilterTabs } from "@/components/FilterTabs"
 import { MonthFilter, MONTH_FILTER_UNASSIGNED } from "@/components/MonthFilter"
 import { QuickEstimateCard } from "@/components/QuickEstimateCard"
 
+const LS_LOCK = "kuso:home:filterLocked"
+const LS_FILTER = "kuso:home:filter"
+const LS_MONTH = "kuso:home:monthFilter"
+
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([])
   const [filter, setFilter] = useState<FilterValue>("all")
   const [monthFilter, setMonthFilter] = useState<string | null>(null)
+  const [filterLocked, setFilterLocked] = useState(false)
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
     seedIfEmpty()
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setProducts(storage.getProducts().map(ensureImages))
+    const locked = localStorage.getItem(LS_LOCK) === "1"
+    setFilterLocked(locked)
+    if (locked) {
+      const f = localStorage.getItem(LS_FILTER) as FilterValue | null
+      const m = localStorage.getItem(LS_MONTH)
+      if (f === "all" || f === "in_progress" || f === "done") setFilter(f)
+      if (m) setMonthFilter(m)
+    }
     setHydrated(true)
   }, [])
+
+  // 固定 ON の間は値変更を永続化
+  useEffect(() => {
+    if (!hydrated || !filterLocked) return
+    localStorage.setItem(LS_FILTER, filter)
+  }, [filter, filterLocked, hydrated])
+
+  useEffect(() => {
+    if (!hydrated || !filterLocked) return
+    if (monthFilter === null) localStorage.removeItem(LS_MONTH)
+    else localStorage.setItem(LS_MONTH, monthFilter)
+  }, [monthFilter, filterLocked, hydrated])
+
+  function toggleFilterLock(next: boolean) {
+    setFilterLocked(next)
+    localStorage.setItem(LS_LOCK, next ? "1" : "0")
+    if (next) {
+      localStorage.setItem(LS_FILTER, filter)
+      if (monthFilter) localStorage.setItem(LS_MONTH, monthFilter)
+      else localStorage.removeItem(LS_MONTH)
+    }
+  }
 
   const summary = summarize(products)
   const byStatus = filterProducts(products, filter)
@@ -82,6 +117,23 @@ export default function Home() {
         <div className="mt-4 mb-4 flex items-center gap-3 flex-wrap">
           <FilterTabs value={filter} onChange={setFilter} />
           <MonthFilter value={monthFilter} onChange={setMonthFilter} />
+          <label
+            className={
+              "inline-flex items-center gap-1.5 text-xs cursor-pointer select-none px-2 py-1 rounded border transition " +
+              (filterLocked
+                ? "bg-amber-50 border-amber-300 text-amber-800 font-semibold"
+                : "bg-white border-zinc-300 text-zinc-600 hover:bg-zinc-50")
+            }
+            title="オンにすると、画面遷移後もフィルタが保持されます"
+          >
+            <input
+              type="checkbox"
+              checked={filterLocked}
+              onChange={(e) => toggleFilterLock(e.target.checked)}
+              className="accent-amber-500"
+            />
+            {filterLocked ? "🔒 フィルタ固定中" : "フィルタを固定"}
+          </label>
         </div>
 
         {!hydrated ? (

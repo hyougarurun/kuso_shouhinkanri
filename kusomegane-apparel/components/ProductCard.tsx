@@ -42,12 +42,12 @@ export function ProductCard({ product }: { product: Product }) {
       onDragStart={onDragStart}
       onClick={onClick}
       className={
-        "flex gap-3 bg-white rounded-lg border p-3 shadow-sm hover:shadow-md hover:border-zinc-300 transition cursor-pointer active:cursor-grabbing select-none " +
+        "flex gap-4 bg-white rounded-lg border p-4 shadow-sm hover:shadow-md hover:border-zinc-300 transition cursor-pointer active:cursor-grabbing select-none " +
         (hasDrive ? "border-lime-300 ring-1 ring-lime-300" : "border-zinc-200")
       }
     >
-      {/* 左: メインサムネ 112px */}
-      <div className="relative w-28 h-28 shrink-0 rounded-md overflow-hidden bg-zinc-100">
+      {/* 左: メインサムネ 176px */}
+      <div className="relative w-44 h-44 shrink-0 rounded-md overflow-hidden bg-zinc-100">
         {mainImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -57,11 +57,11 @@ export function ProductCard({ product }: { product: Product }) {
             className="w-full h-full object-cover pointer-events-none"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-[10px] text-zinc-400">
+          <div className="w-full h-full flex items-center justify-center text-xs text-zinc-400">
             No Img
           </div>
         )}
-        <span className="absolute top-0 left-0 text-[10px] font-bold bg-white/90 text-black px-1.5 py-0.5 rounded-br-md">
+        <span className="absolute top-0 left-0 text-xs font-bold bg-white/90 text-black px-1.5 py-0.5 rounded-br-md">
           No.{product.productNumber}
         </span>
       </div>
@@ -69,14 +69,14 @@ export function ProductCard({ product }: { product: Product }) {
       {/* 中央: 情報 + 下に追加サムネ */}
       <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
         <div className="min-w-0">
-          <div className="flex items-baseline gap-1.5 min-w-0">
-            <span className="text-[15px] font-bold text-zinc-900 truncate">
+          <div className="flex items-baseline gap-2 min-w-0">
+            <span className="text-lg font-bold text-zinc-900 truncate">
               {product.name || "（無題）"}
             </span>
             {hasSheet && (
               <span
                 title="シート登録済み"
-                className="shrink-0 text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1 py-0.5"
+                className="shrink-0 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5"
               >
                 シート済
               </span>
@@ -84,23 +84,23 @@ export function ProductCard({ product }: { product: Product }) {
             {hasDrive && (
               <span
                 title={`Drive ${product.driveFiles?.length ?? 0} ファイル`}
-                className="shrink-0 text-[9px] font-bold text-lime-800 bg-lime-50 border border-lime-300 rounded px-1 py-0.5"
+                className="shrink-0 text-[10px] font-bold text-lime-800 bg-lime-50 border border-lime-300 rounded px-1.5 py-0.5"
               >
                 Drive {product.driveFiles?.length}
               </span>
             )}
           </div>
-          <div className="text-[11px] text-zinc-500 truncate mt-0.5">
+          <div className="text-xs text-zinc-500 truncate mt-1">
             {[product.series, product.colors.join("・")].filter(Boolean).join(" · ")}
           </div>
-          <div className="text-[11px] text-zinc-700 truncate">
+          <div className="text-xs text-zinc-700 truncate mt-0.5">
             次: {nextLabel}
           </div>
         </div>
 
-        {/* 追加画像サムネ 2〜6 枚目 */}
+        {/* 追加画像サムネ 2〜6 枚目（1.5倍化: 40 → 60px） */}
         {subThumbs.length > 0 && (
-          <div className="flex gap-1 mt-1">
+          <div className="flex gap-1.5 mt-2">
             {subThumbs.map((img) => (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -108,11 +108,11 @@ export function ProductCard({ product }: { product: Product }) {
                 src={img.dataUrl}
                 alt="thumb"
                 draggable={false}
-                className="w-10 h-10 rounded object-cover border border-zinc-200 pointer-events-none"
+                className="w-[60px] h-[60px] rounded object-cover border border-zinc-200 pointer-events-none"
               />
             ))}
             {gallery.length > 6 && (
-              <div className="w-10 h-10 rounded border border-zinc-200 bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-500 font-bold">
+              <div className="w-[60px] h-[60px] rounded border border-zinc-200 bg-zinc-100 flex items-center justify-center text-xs text-zinc-500 font-bold">
                 +{gallery.length - 6}
               </div>
             )}
@@ -122,11 +122,11 @@ export function ProductCard({ product }: { product: Product }) {
 
       {/* 中右: 推定加工費 */}
       {product.estimation && (
-        <div className="hidden md:flex shrink-0 rounded-md bg-amber-50 border border-amber-200 px-2.5 py-1.5 flex-col justify-center items-center min-w-[110px]">
-          <div className="text-[10px] text-amber-700 leading-none">
+        <div className="hidden md:flex shrink-0 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 flex-col justify-center items-center min-w-[140px]">
+          <div className="text-[11px] text-amber-700 leading-none">
             推定加工費
           </div>
-          <div className="text-[12px] font-bold text-amber-900 leading-tight mt-1 text-center">
+          <div className="text-sm font-bold text-amber-900 leading-tight mt-1 text-center">
             {product.estimation.totalMin !== undefined &&
             product.estimation.totalMax !== undefined
               ? `¥${product.estimation.totalMin.toLocaleString()}〜${product.estimation.totalMax.toLocaleString()}`
@@ -136,18 +136,18 @@ export function ProductCard({ product }: { product: Product }) {
       )}
 
       {/* 右: ステータス + 進捗 + カウントダウン */}
-      <div className="shrink-0 flex flex-col justify-between items-end py-0.5 min-w-[120px]">
+      <div className="shrink-0 flex flex-col justify-between items-end py-0.5 min-w-[150px]">
         <StatusBadge status={status} />
         <div className="flex items-center gap-1.5 w-full">
-          <div className="flex-1 min-w-[70px]">
+          <div className="flex-1 min-w-[90px]">
             <ProgressBar done={done} total={total} />
           </div>
-          <span className="text-[10px] font-bold text-zinc-700 shrink-0">
+          <span className="text-xs font-bold text-zinc-700 shrink-0">
             {done}/{total}
           </span>
         </div>
         {!step5Done && countdown ? (
-          <div className="scale-90 origin-right">
+          <div className="origin-right">
             <SampleCountdownLabel data={countdown} />
           </div>
         ) : (
