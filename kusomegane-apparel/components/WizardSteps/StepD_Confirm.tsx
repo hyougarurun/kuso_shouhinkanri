@@ -113,8 +113,6 @@ export function StepD_Confirm({
         </div>
 
         <div className="border-t border-zinc-100 pt-2 grid grid-cols-2 gap-y-1 text-[12px]">
-          <div className="text-zinc-500">加工種別</div>
-          <div>{basic.processingType || "-"}</div>
           <div className="text-zinc-500">ボディ型番</div>
           <div>{basic.bodyModelNumber || "-"}</div>
           <div className="text-zinc-500">素材</div>

@@ -69,8 +69,6 @@ export function Step3_Complete({
         <div>{basic.productType || "-"}</div>
         <div className="text-zinc-500">素材</div>
         <div>{basic.material}</div>
-        <div className="text-zinc-500">加工種別</div>
-        <div>{basic.processingType || "-"}</div>
         <div className="text-zinc-500">ボディ型番</div>
         <div>{basic.bodyModelNumber || "-"}</div>
         <div className="text-zinc-500">受注生産</div>

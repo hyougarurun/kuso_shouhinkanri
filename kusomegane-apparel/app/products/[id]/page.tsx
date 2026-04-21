@@ -203,13 +203,26 @@ export default function ProductDetailPage() {
           {/* キャプション */}
           <section className="space-y-2">
             <h2 className="text-[11px] font-bold text-zinc-500 px-1">キャプション</h2>
-            <CaptionBlock text={product.captionText} />
+            <CaptionBlock
+              product={product}
+              onUpdate={(captionText) =>
+                update({
+                  ...product,
+                  captionText,
+                  assets: {
+                    ...product.assets,
+                    captionDone: captionText.length > 0,
+                  },
+                  updatedAt: new Date().toISOString(),
+                })
+              }
+            />
           </section>
 
           {/* 商品情報 */}
           <section className="space-y-2">
             <h2 className="text-[11px] font-bold text-zinc-500 px-1">商品情報</h2>
-            <ProductInfoTable product={product} />
+            <ProductInfoTable product={product} onUpdate={update} />
           </section>
         </div>
 

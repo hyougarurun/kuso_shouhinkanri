@@ -3,7 +3,6 @@
 import {
   COLOR_OPTIONS,
   SIZE_OPTIONS,
-  PROCESSING_OPTIONS,
   PRODUCT_TYPE_OPTIONS,
 } from "@/constants"
 import { Chip } from "@/components/ui/Chip"
@@ -94,22 +93,6 @@ export function StepB_BasicInfo({
               onClick={() => onChange({ sizes: toggle(basic.sizes, s) })}
             >
               {s}
-            </Chip>
-          ))}
-        </div>
-      </Field>
-
-      <Field label="加工種別">
-        <div className="flex flex-wrap gap-1">
-          {PROCESSING_OPTIONS.map((p) => (
-            <Chip
-              key={p}
-              selected={basic.processingType === p}
-              onClick={() =>
-                onChange({ processingType: basic.processingType === p ? "" : p })
-              }
-            >
-              {p}
             </Chip>
           ))}
         </div>

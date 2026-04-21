@@ -1,4 +1,5 @@
 import {
+  GalleryImage,
   ImageAnalysis,
   ProcessingDetails,
   Product,
@@ -138,6 +139,17 @@ export function wizardToProducts(
     const colorIndex = hyphenIndex >= 0 ? idx : undefined
     const assignedColors =
       productNumbers.length > 1 ? [basic.colors[idx]] : [...basic.colors]
+    // 登録画像を gallery 先頭に投入（商品詳細の Gallery セクションで即表示されるように）
+    const gallery: GalleryImage[] = image
+      ? [
+          {
+            id: `${num}-initial-${Date.now()}`,
+            dataUrl: image.dataUrl,
+            mimeType: image.mediaType,
+            addedAt: now,
+          },
+        ]
+      : []
     return {
       id: makeId(),
       productNumber: num,
@@ -161,6 +173,7 @@ export function wizardToProducts(
       sheetRowNumbers: {},
       captionText,
       imagePreview: image?.dataUrl ?? null,
+      gallery,
       currentStep: 2,
       steps: Array.from({ length: 8 }, (_, i) => ({
         stepNumber: i + 1,
