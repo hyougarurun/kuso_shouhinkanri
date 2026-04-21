@@ -4,6 +4,7 @@ import { useState } from "react"
 import { ImageAnalysis } from "@/types"
 import { buildFullCaption } from "@/lib/caption"
 import { WizardBasic, WizardCaption } from "@/lib/wizardState"
+import { SuggestiveInput } from "@/components/SuggestiveInput"
 
 export function StepC_Caption({
   basic,
@@ -106,10 +107,10 @@ export function StepC_Caption({
               <div className="text-[11px] font-bold text-zinc-700 mb-1">
                 デザイン1文（designDesc）
               </div>
-              <input
-                type="text"
+              <SuggestiveInput
+                historyKey="caption.designDesc"
                 value={caption.designDesc}
-                onChange={(e) => rebuildFromParts(caption.description, e.target.value)}
+                onChange={(v) => rebuildFromParts(caption.description, v)}
                 className="w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
               />
             </div>

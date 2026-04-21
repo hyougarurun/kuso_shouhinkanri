@@ -8,6 +8,7 @@ import {
 } from "@/constants"
 import { Chip } from "@/components/ui/Chip"
 import { Field } from "@/components/ui/Field"
+import { SuggestiveInput } from "@/components/SuggestiveInput"
 import { WizardBasic, validateBasic } from "@/lib/wizardState"
 import { getColorStyle } from "@/lib/colorPalette"
 import { getBodyModels, getMaterialForModel } from "@/lib/bodyModelStore"
@@ -35,20 +36,20 @@ export function StepB_BasicInfo({
       </div>
 
       <Field label="商品名" required>
-        <input
-          type="text"
+        <SuggestiveInput
+          historyKey="product.name"
           value={basic.name}
-          onChange={(e) => onChange({ name: e.target.value })}
+          onChange={(v) => onChange({ name: v })}
           placeholder="例: ポチクソ 2フェーズ"
           className="w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
         />
       </Field>
 
       <Field label="シリーズ名">
-        <input
-          type="text"
+        <SuggestiveInput
+          historyKey="product.series"
           value={basic.series}
-          onChange={(e) => onChange({ series: e.target.value })}
+          onChange={(v) => onChange({ series: v })}
           placeholder="例: ポチクソ"
           className="w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
         />
@@ -148,10 +149,10 @@ export function StepB_BasicInfo({
       </Field>
 
       <Field label="素材">
-        <input
-          type="text"
+        <SuggestiveInput
+          historyKey="product.material"
           value={basic.material}
-          onChange={(e) => onChange({ material: e.target.value })}
+          onChange={(v) => onChange({ material: v })}
           className="w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
         />
       </Field>

@@ -12,6 +12,7 @@ import { mapMethodFromProcessingType } from "@/lib/print-cost/mapping"
 import { storage } from "@/lib/storage"
 import { Product } from "@/types"
 import { PRODUCT_DRAG_TYPE } from "./ProductCard"
+import { SuggestiveInput } from "@/components/SuggestiveInput"
 
 type Meta = {
   invoices: number
@@ -403,19 +404,21 @@ export function QuickEstimateCard({ onRegistered, wide = false }: Props) {
           <div className={wide ? "grid grid-cols-2 gap-3" : "space-y-3"}>
             <label className="block">
               <span className="text-[11px] text-zinc-500">ボディ型番</span>
-              <input
+              <SuggestiveInput
+                historyKey="estimate.bodyCode"
                 className="mt-1 w-full border border-zinc-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow"
                 value={bodyCode}
-                onChange={(e) => setBodyCode(e.target.value)}
+                onChange={setBodyCode}
                 required
               />
             </label>
             <label className="block">
               <span className="text-[11px] text-zinc-500">色</span>
-              <input
+              <SuggestiveInput
+                historyKey="estimate.color"
                 className="mt-1 w-full border border-zinc-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow"
                 value={color}
-                onChange={(e) => setColor(e.target.value)}
+                onChange={setColor}
               />
             </label>
           </div>

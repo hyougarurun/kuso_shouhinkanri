@@ -81,6 +81,7 @@
 - PoC-P9: 精度検証（MAPE < 20% 目標）
 
 ## 直近の完了タスク
+- 2026-04-21 **入力履歴サジェスト共通基盤**: `lib/inputHistory.ts`（LocalStorage、最大30件/キー、新しい順、TC-IH-001〜010 全 PASS）+ `components/SuggestiveInput.tsx`（datalist + ▾ ボタン履歴一覧 + 個別×削除）。BaseModelUploadDialog / StepB（商品名・シリーズ・素材） / StepC（designDesc） / QuickEstimateCard（bodyCode・color）に適用。86/86 テスト PASS
 - 2026-04-21 **Phase 1.4a 完了**: base モデル画像基盤。Supabase `base_models` テーブル + Storage バケット（非公開、Signed URL 配信）、`/api/base-models/*`（upload/list/patch/delete）、`/base-models` グリッド UI + アップロードダイアログ + フィルタ（性別・ポーズ・服種・★）+ Sidebar 導線。10 プロンプトドラフト（`docs/design-notes/phase1.4a-prompts.md`）。TS/vitest 76/76 PASS。db push 適用済
 - 2026-04-20 **Phase 1.1-1.3 完全動作確認**: Supabase DB push 済、Drive フォルダ自動作成+ファイルアップ、Sheets 新規タブ「商品管理」に 8 列自動追記 + A 列に合成画像埋め込み（=IMAGE() + Drive 公開 URL）。60/60 テスト PASS
   - commit: 2ea3010, b00c90f, 41f1b0e, 4489db0, 93fca6a

@@ -6,6 +6,7 @@ import type {
   BaseModelGender,
   BaseModelPose,
 } from "@/types"
+import { SuggestiveInput } from "@/components/SuggestiveInput"
 
 const GARMENT_OPTIONS: { value: BaseModelGarmentType; label: string }[] = [
   { value: "crewneck", label: "クルーネックスウェット" },
@@ -259,20 +260,20 @@ export function BaseModelUploadDialog({ open, onClose, onUploaded }: Props) {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1">服の色</label>
-              <input
-                type="text"
+              <SuggestiveInput
+                historyKey="baseModel.garmentColor"
                 value={garmentColor}
-                onChange={(e) => setGarmentColor(e.target.value)}
+                onChange={setGarmentColor}
                 placeholder="例: ブラック"
                 className="w-full text-sm border border-zinc-300 rounded px-2 py-1"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1">背景色</label>
-              <input
-                type="text"
+              <SuggestiveInput
+                historyKey="baseModel.backgroundColor"
                 value={backgroundColor}
-                onChange={(e) => setBackgroundColor(e.target.value)}
+                onChange={setBackgroundColor}
                 placeholder="例: マスタードイエロー"
                 className="w-full text-sm border border-zinc-300 rounded px-2 py-1"
               />
@@ -284,20 +285,20 @@ export function BaseModelUploadDialog({ open, onClose, onUploaded }: Props) {
               <label className="block text-xs font-semibold text-zinc-700 mb-1">
                 ラベル（任意）
               </label>
-              <input
-                type="text"
+              <SuggestiveInput
+                historyKey="baseModel.variantLabel"
                 value={variantLabel}
-                onChange={(e) => setVariantLabel(e.target.value)}
+                onChange={setVariantLabel}
                 placeholder="例: ポコポコメガネ"
                 className="w-full text-sm border border-zinc-300 rounded px-2 py-1"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1">出典モデル（任意）</label>
-              <input
-                type="text"
+              <SuggestiveInput
+                historyKey="baseModel.sourceModel"
                 value={sourceModel}
-                onChange={(e) => setSourceModel(e.target.value)}
+                onChange={setSourceModel}
                 placeholder="例: real-photo / nano-banana-pro"
                 className="w-full text-sm border border-zinc-300 rounded px-2 py-1"
               />

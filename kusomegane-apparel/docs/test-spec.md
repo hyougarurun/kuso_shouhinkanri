@@ -13,8 +13,9 @@
 | G. 商品複製 | 6 | 6 | 0 |
 | H. 画像マイグレーション | 4 | 4 | 0 |
 | I. ZIPエクスポート | 4 | 4 | 0 |
-| J. BaseModel serialize | 6 | 0 | 0 |
-| **合計** | **51** | **45** | **0** |
+| J. BaseModel serialize | 6 | 6 | 0 |
+| K. 入力履歴サジェスト | 10 | 10 | 0 |
+| **合計** | **61** | **61** | **0** |
 
 ## H. 画像マイグレーション（Phase 0.7）
 
@@ -91,3 +92,45 @@
 - **ファイル**: `__tests__/baseModelSerialize.test.ts`
 - **優先度**: P1
 - **期待結果**: 拡張子が大文字でも小文字に正規化
+
+## K. 入力履歴サジェスト（共通）
+
+### TC-IH-001: 空キー → 空配列
+- **ファイル**: `__tests__/inputHistory.test.ts`
+- **優先度**: P0
+
+### TC-IH-002: push したら load で取れる（新しい順）
+- **ファイル**: `__tests__/inputHistory.test.ts`
+- **優先度**: P0
+
+### TC-IH-003: 同一値再 push で先頭に集約（重複排除）
+- **ファイル**: `__tests__/inputHistory.test.ts`
+- **優先度**: P0
+
+### TC-IH-004: 空文字 / 空白のみは push されない
+- **ファイル**: `__tests__/inputHistory.test.ts`
+- **優先度**: P0
+
+### TC-IH-005: 前後 trim される
+- **ファイル**: `__tests__/inputHistory.test.ts`
+- **優先度**: P0
+
+### TC-IH-006: HISTORY_MAX 超過で古いものから押し出される
+- **ファイル**: `__tests__/inputHistory.test.ts`
+- **優先度**: P0
+
+### TC-IH-007: 異なるキーは独立保存
+- **ファイル**: `__tests__/inputHistory.test.ts`
+- **優先度**: P0
+
+### TC-IH-008: removeInputHistoryItem で個別削除
+- **ファイル**: `__tests__/inputHistory.test.ts`
+- **優先度**: P1
+
+### TC-IH-009: clearInputHistory でキーごと削除（他キーは保持）
+- **ファイル**: `__tests__/inputHistory.test.ts`
+- **優先度**: P1
+
+### TC-IH-010: 不正 JSON は空配列フォールバック
+- **ファイル**: `__tests__/inputHistory.test.ts`
+- **優先度**: P1
