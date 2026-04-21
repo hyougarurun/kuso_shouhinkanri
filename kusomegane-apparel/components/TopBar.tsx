@@ -7,6 +7,7 @@ function breadcrumb(pathname: string): string {
   if (pathname === "/") return "ホーム"
   if (pathname === "/products/new") return "ホーム / 新規商品登録"
   if (pathname.startsWith("/products/")) return "ホーム / 商品詳細"
+  if (pathname.startsWith("/schedule")) return "販売スケジュール"
   if (pathname.startsWith("/estimate")) return "加工費推定ツール"
   return pathname
 }

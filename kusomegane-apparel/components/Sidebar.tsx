@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 
 const NAV_ITEMS = [
   { href: "/", label: "商品管理", match: (p: string) => p === "/" || p.startsWith("/products") },
+  { href: "/schedule", label: "スケジュール", match: (p: string) => p.startsWith("/schedule") },
   { href: "/estimate", label: "加工費推定", match: (p: string) => p.startsWith("/estimate") },
 ]
 

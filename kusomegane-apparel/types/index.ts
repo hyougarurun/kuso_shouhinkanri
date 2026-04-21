@@ -83,6 +83,7 @@ export interface Product {
   isMadeToOrder: boolean
   freeShipping: boolean
   notes: string
+  plannedMonths?: string[]
   orderQuantities: OrderQuantities
   driveFolderUrl: string
   driveFiles?: DriveFile[]
