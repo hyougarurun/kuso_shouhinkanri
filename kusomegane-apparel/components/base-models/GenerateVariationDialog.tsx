@@ -11,6 +11,13 @@ const TARGETS: { value: BaseModelGarmentType; label: string }[] = [
   { value: "hoodie", label: "パーカー" },
 ]
 
+type VariationMode = "conservative" | "balanced" | "creative"
+const MODES: { value: VariationMode; label: string; hint: string }[] = [
+  { value: "conservative", label: "保守的", hint: "人物・ポーズ・背景を維持" },
+  { value: "balanced", label: "標準", hint: "顔/ポーズは自然に変化 OK" },
+  { value: "creative", label: "柔軟", hint: "構図・ポーズ大胆にリアレンジ" },
+]
+
 const MODEL_OPTIONS = [
   { value: "gemini-2.5-flash-image", label: "Gemini 2.5 Flash Image (~$0.039/枚)" },
   { value: "gemini-2.5-flash-image-preview", label: "Gemini 2.5 Flash Image Preview" },
@@ -36,6 +43,7 @@ export function GenerateVariationDialog({
   onGenerated,
 }: Props) {
   const [targetGarment, setTargetGarment] = useState<BaseModelGarmentType>("tshirt")
+  const [variationMode, setVariationMode] = useState<VariationMode>("balanced")
   const [additionalPrompt, setAdditionalPrompt] = useState("")
   const [model, setModel] = useState<string>(MODEL_OPTIONS[0].value)
   const [busy, setBusy] = useState(false)
@@ -52,6 +60,7 @@ export function GenerateVariationDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           targetGarment,
+          variationMode,
           additionalPrompt: additionalPrompt || undefined,
           model,
         }),
@@ -133,6 +142,37 @@ export function GenerateVariationDialog({
 
           <div>
             <label className="block text-xs font-semibold text-zinc-700 mb-1">
+              バリエーション強度
+            </label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {MODES.map((m) => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setVariationMode(m.value)}
+                  disabled={busy}
+                  title={m.hint}
+                  className={
+                    "px-2 py-2 rounded text-xs font-semibold border transition " +
+                    (variationMode === m.value
+                      ? "bg-brand-yellow text-black border-amber-400"
+                      : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50")
+                  }
+                >
+                  <div>{m.label}</div>
+                  <div className="text-[9px] font-normal opacity-75 leading-tight mt-0.5">
+                    {m.hint}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-zinc-500 mt-1">
+              デザイン・プリントは全モード共通で保持します
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-zinc-700 mb-1">
               追加指示（任意）
             </label>
             <SuggestiveInput
@@ -163,8 +203,7 @@ export function GenerateVariationDialog({
           </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded p-2 text-[11px] text-amber-800">
-            プリント/ロゴ/グラフィックを保ったまま、服種だけ差し替えます。
-            生成は 10〜30 秒かかります。
+            プリント/ロゴ/グラフィックを保持。人物・ポーズは選択した強度に応じて変化します。生成は 10〜30 秒かかります。
           </div>
 
           {error && (

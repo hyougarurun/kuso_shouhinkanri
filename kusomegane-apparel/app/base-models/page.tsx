@@ -9,7 +9,10 @@ import type {
 } from "@/types"
 import { BaseModelUploadDialog } from "@/components/base-models/BaseModelUploadDialog"
 import { GenerateVariationDialog } from "@/components/base-models/GenerateVariationDialog"
-import { CompositeDialog } from "@/components/base-models/CompositeDialog"
+import {
+  getCachedSignedUrl,
+  ingestSignedUrls,
+} from "@/lib/signedUrlCache"
 
 interface BaseModelWithUrl extends BaseModel {
   signedUrl: string
@@ -32,7 +35,6 @@ export default function BaseModelsPage() {
   const [error, setError] = useState<string | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
   const [variationTarget, setVariationTarget] = useState<BaseModelWithUrl | null>(null)
-  const [compositeTarget, setCompositeTarget] = useState<BaseModelWithUrl | null>(null)
   const [genderFilter, setGenderFilter] = useState<GenderFilter>("all")
   const [poseFilter, setPoseFilter] = useState<PoseFilter>("all")
   const [garmentFilter, setGarmentFilter] = useState<GarmentFilter>("all")
@@ -53,7 +55,14 @@ export default function BaseModelsPage() {
         throw new Error(j.error || "取得失敗")
       }
       const data = await res.json()
-      setModels(data.models ?? [])
+      const fetched: BaseModelWithUrl[] = data.models ?? []
+      ingestSignedUrls(fetched)
+      // キャッシュに既に URL があれば優先（同じ URL でも先に到着した方で即描画可能）
+      const merged = fetched.map((m) => {
+        const cached = getCachedSignedUrl(m.storagePath)
+        return cached ? { ...m, signedUrl: cached } : m
+      })
+      setModels(merged)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -163,7 +172,7 @@ export default function BaseModelsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {models.map((m) => (
+          {models.map((m, idx) => (
             <div
               key={m.id}
               className="flex flex-col bg-white rounded-lg border border-zinc-200 overflow-hidden hover:shadow-md transition"
@@ -176,7 +185,8 @@ export default function BaseModelsPage() {
                     alt={m.variantLabel || m.id}
                     width={m.width ?? 600}
                     height={m.height ?? 600}
-                    loading="lazy"
+                    loading={idx < 8 ? "eager" : "lazy"}
+                    fetchPriority={idx < 4 ? "high" : "auto"}
                     decoding="async"
                     className="w-full h-full object-contain"
                   />
@@ -228,20 +238,13 @@ export default function BaseModelsPage() {
                     {[m.garmentColor, m.backgroundColor].filter(Boolean).join(" / ")}
                   </div>
                 )}
-                <div className="flex gap-1 mt-1 flex-wrap">
+                <div className="flex gap-1 mt-1">
                   <button
                     onClick={() => setVariationTarget(m)}
                     className="flex-1 text-[10px] bg-amber-100 hover:bg-amber-200 rounded px-2 py-1 font-semibold text-amber-900"
                     title="服種の派生バリエーション生成"
                   >
                     🎨 派生
-                  </button>
-                  <button
-                    onClick={() => setCompositeTarget(m)}
-                    className="flex-1 text-[10px] bg-indigo-100 hover:bg-indigo-200 rounded px-2 py-1 font-semibold text-indigo-900"
-                    title="デザイン画像を合成"
-                  >
-                    🖼 合成
                   </button>
                   <button
                     onClick={() => download(m)}
@@ -278,14 +281,6 @@ export default function BaseModelsPage() {
         onGenerated={refresh}
       />
 
-      <CompositeDialog
-        open={!!compositeTarget}
-        baseModelId={compositeTarget?.id ?? null}
-        baseThumbUrl={compositeTarget?.signedUrl}
-        baseLabel={compositeTarget?.variantLabel}
-        onClose={() => setCompositeTarget(null)}
-        onGenerated={refresh}
-      />
     </div>
   )
 }

@@ -139,58 +139,23 @@ export async function generateImage(
   }
 }
 
-export type CompositeLocation =
-  | "front-center"
-  | "front-left-chest"
-  | "back-center"
-  | "sleeve"
-export type CompositeSize = "small" | "medium" | "large"
+export type VariationMode = "conservative" | "balanced" | "creative"
 
 /**
- * 合成画像生成用プロンプトを組み立てる。
- * Image 1 = base（モデル着用画像）、Image 2 = デザインアートワーク。
+ * ガーメント変更プロンプト。
+ * variationMode で「人物・ポーズ・背景をどれだけ保持するか」の自由度を切替える。
+ *
+ * - conservative: 元の写真から服種だけ差し替え（人物/ポーズ/背景すべて保持）
+ * - balanced: プリントと服色は完全保持、顔・ポーズ・背景は自然な範囲で変えて OK
+ * - creative: プリントと服種だけ保持、モデル・ポーズ・構図・背景は大胆にリアレンジ
+ *
+ * 共通で絶対保持: **プリント/ロゴ/グラフィック/テキストのデザイン**
+ * （k2 運用: 顔変わる OK、ポーズ柔軟に変えたい、デザインは保持必須）
  */
-export function buildCompositePrompt(opts: {
-  location: CompositeLocation
-  size: CompositeSize
-  additionalPrompt?: string
-}): string {
-  const locLabels: Record<CompositeLocation, string> = {
-    "front-center": "center of the front/chest area",
-    "front-left-chest": "left chest (small wappen-style placement)",
-    "back-center": "center of the back panel (large print area)",
-    sleeve: "upper sleeve",
-  }
-  const sizeLabels: Record<CompositeSize, string> = {
-    small: "small (wappen / pocket-logo scale, about 8-10 cm wide)",
-    medium: "medium (typical chest graphic scale, about 20-25 cm wide)",
-    large: "large (full back-print scale, about 35-40 cm wide)",
-  }
-
-  const base = [
-    `Image 1 is a photograph of a person wearing a garment.`,
-    `Image 2 is a graphic artwork (logo / print design) to be applied onto the garment in Image 1.`,
-    ``,
-    `Task: produce a single photorealistic image where the artwork from Image 2 is printed on the garment in Image 1 at the ${locLabels[opts.location]}, at ${sizeLabels[opts.size]} scale.`,
-    ``,
-    `CRITICAL requirements:`,
-    `- Preserve EVERYTHING else from Image 1 exactly: the same person (face, hair, body, pose, hands), the same background, the same lighting direction and color temperature, the same camera angle and framing, and the same garment (shape, color, material, wrinkles).`,
-    `- Apply the artwork so it FOLLOWS the garment's fabric: match cloth wrinkles, shadows, and perspective so the print looks naturally printed, not pasted on top.`,
-    `- Keep the artwork's proportions, colors, typography and shapes from Image 2 as faithfully as possible. Do NOT redraw, restyle, or reinterpret the artwork.`,
-    `- If the artwork has a transparent background, only the visible shapes should appear on the garment (no white rectangle).`,
-    `- Output a single high-resolution photorealistic image with the same aspect ratio as Image 1.`,
-  ].join("\n")
-
-  return opts.additionalPrompt
-    ? `${base}\n\nAdditional notes: ${opts.additionalPrompt}`
-    : base
-}
-
-/**
- * ガーメント変更用のプロンプトを組み立てる。
- * 既存画像の人物・背景・デザインを保ちつつ、服種だけを差し替える。
- */
-export function buildGarmentSwapPrompt(targetGarment: string): string {
+export function buildGarmentSwapPrompt(
+  targetGarment: string,
+  variationMode: VariationMode = "balanced",
+): string {
   const labels: Record<string, string> = {
     tshirt: "short-sleeve T-shirt",
     longsleeve: "long-sleeve crewneck T-shirt",
@@ -198,11 +163,36 @@ export function buildGarmentSwapPrompt(targetGarment: string): string {
     hoodie: "pullover hoodie with drawstring hood and front kangaroo pocket",
   }
   const targetLabel = labels[targetGarment] ?? targetGarment
-  return [
-    `Edit the input photograph: change ONLY the garment the model is wearing to a ${targetLabel}.`,
-    `Strictly preserve EVERYTHING ELSE: the same person (face, hair, body, pose), the same background, the same lighting, the same camera angle, and crucially THE EXACT SAME PRINT DESIGN, LOGO, GRAPHIC, AND TEXT on the garment.`,
-    `The print/logo/graphic must be identical in shape, color, position, and scale — only the garment shape (sleeves, hem, collar) should differ to match a ${targetLabel}.`,
-    `Match the original garment's color and texture as closely as possible.`,
-    `Output a single high-resolution photorealistic image, same aspect ratio as the input.`,
+
+  const header = `Generate a new apparel lookbook photograph based on the input image. The new photograph shows a young Japanese model wearing a ${targetLabel}.`
+
+  const preserveDesign = [
+    `ABSOLUTELY PRESERVE the garment's print/logo/graphic/text design from the input, identical in shape, colors, typography, proportions, and composition.`,
+    `Do NOT redraw, restyle, or reinterpret the print artwork. Only the garment's silhouette (sleeves, hem, collar) should change to match a ${targetLabel}.`,
+    `Also keep the garment's base color close to the original.`,
   ].join(" ")
+
+  const flexibility: Record<VariationMode, string> = {
+    conservative: [
+      `Keep the SAME person (face, hair, body, hands), the SAME pose, the SAME background, the SAME lighting, the SAME camera angle.`,
+    ].join(" "),
+    balanced: [
+      `The model can be a DIFFERENT Japanese person of similar age (20s) — face, hair, and exact body do NOT need to match the input.`,
+      `The pose may change naturally (standing, hands in pockets, slight lean, looking at camera, etc.) as long as the garment is fully visible.`,
+      `Background can be a similar solid-color studio backdrop (any pleasing color).`,
+      `Lighting should remain flat, even, professional studio lighting.`,
+    ].join(" "),
+    creative: [
+      `Freely reimagine the scene: the model can be a different young Japanese person, different pose, different framing (front-facing / three-quarter / back-turn / sitting / walking), different camera angle, different solid or simple background.`,
+      `Feel free to introduce natural variation — make it look like a fresh lookbook shot, not a copy of the input.`,
+      `Keep it photorealistic and professional; avoid abstract or fantasy backgrounds.`,
+    ].join(" "),
+  }
+
+  return [
+    header,
+    preserveDesign,
+    flexibility[variationMode],
+    `Output a single high-resolution photorealistic fashion e-commerce photograph, same aspect ratio as the input.`,
+  ].join("\n\n")
 }

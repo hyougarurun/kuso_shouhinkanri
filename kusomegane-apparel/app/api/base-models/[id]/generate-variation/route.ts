@@ -6,6 +6,7 @@ import {
 import {
   buildGarmentSwapPrompt,
   generateImage,
+  type VariationMode,
 } from "@/lib/gemini/generateImage"
 import type { BaseModel } from "@/types"
 
@@ -15,6 +16,10 @@ interface Context {
 
 function validateGarment(v: unknown): v is BaseModel["garmentType"] {
   return v === "tshirt" || v === "longsleeve" || v === "crewneck" || v === "hoodie"
+}
+
+function validateMode(v: unknown): v is VariationMode {
+  return v === "conservative" || v === "balanced" || v === "creative"
 }
 
 function extFromMime(mime: string): string {
@@ -33,7 +38,12 @@ function extFromMime(mime: string): string {
  */
 export async function POST(req: Request, ctx: Context): Promise<Response> {
   const { id } = await ctx.params
-  let body: { targetGarment?: unknown; additionalPrompt?: unknown; model?: unknown }
+  let body: {
+    targetGarment?: unknown
+    variationMode?: unknown
+    additionalPrompt?: unknown
+    model?: unknown
+  }
   try {
     body = await req.json()
   } catch {
@@ -46,6 +56,9 @@ export async function POST(req: Request, ctx: Context): Promise<Response> {
       { status: 400 },
     )
   }
+  const variationMode: VariationMode = validateMode(body.variationMode)
+    ? body.variationMode
+    : "balanced"
   const additionalPrompt =
     typeof body.additionalPrompt === "string" ? body.additionalPrompt : ""
   const overrideModel = typeof body.model === "string" ? body.model : undefined
@@ -53,7 +66,7 @@ export async function POST(req: Request, ctx: Context): Promise<Response> {
   try {
     const { model: parent, buffer } = await fetchBaseModelWithBinary(id)
 
-    const basePrompt = buildGarmentSwapPrompt(body.targetGarment)
+    const basePrompt = buildGarmentSwapPrompt(body.targetGarment, variationMode)
     const fullPrompt = additionalPrompt
       ? `${basePrompt}\n\nAdditional notes: ${additionalPrompt}`
       : basePrompt
