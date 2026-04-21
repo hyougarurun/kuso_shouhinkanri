@@ -1,13 +1,14 @@
 # 作業進捗
 
 ## 現在の作業
-- 機能: **Phase 1.4a（base モデル画像基盤）実装完了（2026-04-21）**
-- 状態: `/base-models` ページ + Supabase Storage `base-models` バケット + API 一式 稼働中。実画像アップロード待ち
+- 機能: **Phase 1.4b（派生バリエーション生成）実装完了（2026-04-21、API キー有効化待ち）**
+- 状態: 17 枚 base アップ済、1.4a/1.4b 実装完了、Gemini API キー課金有効化後に試験運用
 - リポジトリ: https://github.com/hyougarurun/kuso_shouhinkanri
 - 次にやること:
-  1. k2 が `docs/design-notes/phase1.4a-prompts.md` の 10 プロンプトで画像生成（Nano Banana Pro 想定）
-  2. `/base-models` に 10 枚アップロード → 採用判定（お気に入り ★）
-  3. 採用画像で Phase 1.4b（Kling VTON）着手判断
+  1. k2 が https://console.cloud.google.com/billing で Gemini プロジェクトの課金有効化
+  2. `/base-models` で 1 枚「🎨 派生」→ Tシャツで試験 → 品質確認
+  3. 品質 OK なら 17 枚 × 4 服種 = 68 枚の派生生成（~$2.65）
+  4. **（保留）Phase 1.4c 合成画像**: 設計完了 `docs/design-notes/phase1.4c-composite.md`。k2 の合図で再開
 - 完了した Phase 1:
   - **1.1 Supabase 基盤**: DB スキーマ 4 テーブル適用済、lib/supabase/* 実装 + 6 テスト PASS
   - **1.2 Drive 連携**: /api/drive/folder/ensure + /api/drive/upload、商品番号フォルダ自動作成、全形式 100MB まで
