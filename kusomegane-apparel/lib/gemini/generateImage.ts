@@ -54,6 +54,32 @@ function bufferToBase64(buf: ArrayBuffer | Buffer): string {
   return Buffer.from(new Uint8Array(buf)).toString("base64")
 }
 
+/**
+ * 毎回コンテキストを「ゼロから始めた」扱いで生成するためのプロンプト分岐子。
+ * - 乱数の nonce を入れることで、プロンプトハッシュが変わる（プロキシキャッシュ対策）
+ * - モデルに「前回の傾向に引きずられず自由に構図・ポーズ・アクセサリーを変えてよい」と明示
+ *
+ * Gemini API 自体は stateless（サーバ側に履歴は残らない）が、
+ * 同一プロンプト + 同一画像を与えると潜在空間の同じ地点に落ちがちなので、
+ * これで毎回の探索起点をずらす。
+ */
+function buildFreshContextSalt(): string {
+  const nonce =
+    typeof globalThis.crypto?.randomUUID === "function"
+      ? globalThis.crypto.randomUUID().slice(0, 8)
+      : Math.random().toString(36).slice(2, 10)
+  return [
+    ``,
+    `---`,
+    `[Generation context: start completely fresh. This is an INDEPENDENT generation,`,
+    `do NOT base accessories, pose, camera angle, background details, or composition`,
+    `on any prior output. Freely pick a different pose, different accessories (or none),`,
+    `different framing, different lighting mood, and different micro-details — while`,
+    `strictly obeying the preservation constraints stated above.`,
+    `Variation nonce: ${nonce}]`,
+  ].join("\n")
+}
+
 export async function generateImage(
   input: GenerateImageInput,
 ): Promise<GenerateImageResult> {
@@ -71,7 +97,7 @@ export async function generateImage(
     | { text: string }
     | { inlineData: { mimeType: string; data: string } }
   > = [
-    { text: input.prompt },
+    { text: input.prompt + buildFreshContextSalt() },
     {
       inlineData: {
         mimeType: input.sourceMimeType,
@@ -93,6 +119,10 @@ export async function generateImage(
     generationConfig: {
       // 画像生成モデルは responseModalities で IMAGE を要求する
       responseModalities: ["IMAGE"],
+      // 温度を高めにして、同じ入力でも毎回違うサンプリング経路を取るようにする。
+      // 上げすぎるとプリントが歪むリスクがあるので 1.1 程度に抑える。
+      temperature: 1.1,
+      topP: 0.95,
     },
   }
 
