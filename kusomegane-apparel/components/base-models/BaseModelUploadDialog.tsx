@@ -193,12 +193,12 @@ export function BaseModelUploadDialog({ open, onClose, onUploaded }: Props) {
               </div>
               <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
                 {files.map((f, idx) => (
-                  <div key={idx} className="relative aspect-[3/4] bg-zinc-100 rounded overflow-hidden border border-zinc-200">
+                  <div key={idx} className="relative aspect-square bg-zinc-100 rounded overflow-hidden border border-zinc-200">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={previews[idx]}
                       alt={f.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                     <button
                       onClick={() => removeFile(idx)}

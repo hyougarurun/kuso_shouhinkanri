@@ -164,13 +164,13 @@ export default function BaseModelsPage() {
               key={m.id}
               className="flex flex-col bg-white rounded-lg border border-zinc-200 overflow-hidden hover:shadow-md transition"
             >
-              <div className="relative aspect-[3/4] bg-zinc-100">
+              <div className="relative aspect-square bg-zinc-100">
                 {m.signedUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={m.signedUrl}
                     alt={m.variantLabel || m.id}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-xs text-zinc-400">
