@@ -26,6 +26,8 @@ function makeBaseModel(overrides: Partial<BaseModel> = {}): BaseModel {
     notes: "",
     sourcePrompt: "Professional Japanese lookbook...",
     sourceModel: "nano-banana-pro",
+    generationPrompt: "",
+    generationModel: "",
     createdAt: "2026-04-21T00:00:00.000Z",
     updatedAt: "2026-04-21T00:00:00.000Z",
     ...overrides,
@@ -54,6 +56,10 @@ describe("serializeBaseModel", () => {
       notes: "",
       source_prompt: "Professional Japanese lookbook...",
       source_model: "nano-banana-pro",
+      parent_id: null,
+      target_garment: null,
+      generation_prompt: "",
+      generation_model: "",
     })
   })
 
@@ -89,6 +95,10 @@ describe("parseBaseModel", () => {
     notes: "good light",
     source_prompt: "some prompt",
     source_model: "nano-banana-pro",
+    parent_id: null,
+    target_garment: null,
+    generation_prompt: "",
+    generation_model: "",
     created_at: "2026-04-21T01:00:00.000Z",
     updated_at: "2026-04-21T02:00:00.000Z",
   }
@@ -113,6 +123,8 @@ describe("parseBaseModel", () => {
       notes: "good light",
       sourcePrompt: "some prompt",
       sourceModel: "nano-banana-pro",
+      generationPrompt: "",
+      generationModel: "",
       createdAt: "2026-04-21T01:00:00.000Z",
       updatedAt: "2026-04-21T02:00:00.000Z",
     })

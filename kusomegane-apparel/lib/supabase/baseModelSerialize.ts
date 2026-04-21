@@ -22,6 +22,10 @@ export function serializeBaseModel(
     notes: bm.notes,
     source_prompt: bm.sourcePrompt,
     source_model: bm.sourceModel,
+    parent_id: bm.parentId ?? null,
+    target_garment: bm.targetGarment ?? null,
+    generation_prompt: bm.generationPrompt,
+    generation_model: bm.generationModel,
   }
 }
 
@@ -44,6 +48,10 @@ export function parseBaseModel(row: BaseModelRow): BaseModel {
     notes: row.notes,
     sourcePrompt: row.source_prompt,
     sourceModel: row.source_model,
+    parentId: row.parent_id ?? undefined,
+    targetGarment: row.target_garment ?? undefined,
+    generationPrompt: row.generation_prompt,
+    generationModel: row.generation_model,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

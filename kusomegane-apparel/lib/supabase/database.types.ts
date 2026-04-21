@@ -133,6 +133,10 @@ export type BaseModelRow = {
   notes: string
   source_prompt: string
   source_model: string
+  parent_id: string | null
+  target_garment: BaseModelGarmentTypeDB | null
+  generation_prompt: string
+  generation_model: string
   created_at: string
   updated_at: string
 }

@@ -154,6 +154,10 @@ export interface BaseModel {
   notes: string
   sourcePrompt: string
   sourceModel: string
+  parentId?: string
+  targetGarment?: BaseModelGarmentType
+  generationPrompt: string
+  generationModel: string
   createdAt: string
   updatedAt: string
 }

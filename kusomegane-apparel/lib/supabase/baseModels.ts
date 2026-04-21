@@ -23,6 +23,10 @@ export interface CreateBaseModelInput {
   height?: number
   sourcePrompt?: string
   sourceModel?: string
+  parentId?: string
+  targetGarment?: BaseModel["garmentType"]
+  generationPrompt?: string
+  generationModel?: string
   fileBuffer: ArrayBuffer
   fileExtension: string
 }
@@ -63,6 +67,10 @@ export async function createBaseModel(
     notes: "",
     sourcePrompt: input.sourcePrompt ?? "",
     sourceModel: input.sourceModel ?? "",
+    parentId: input.parentId,
+    targetGarment: input.targetGarment,
+    generationPrompt: input.generationPrompt ?? "",
+    generationModel: input.generationModel ?? "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
@@ -79,6 +87,28 @@ export async function createBaseModel(
     throw new Error(`DB insert 失敗: ${error.message}`)
   }
   return parseBaseModel(data)
+}
+
+/**
+ * id で 1 件取得 + Storage からバイナリも返す。派生生成時に使用。
+ */
+export async function fetchBaseModelWithBinary(id: string): Promise<{
+  model: BaseModel
+  buffer: ArrayBuffer
+}> {
+  const sb = createServerClient()
+  const { data, error } = await sb
+    .from("base_models")
+    .select("*")
+    .eq("id", id)
+    .single()
+  if (error || !data) throw new Error(`base_model 取得失敗: ${error?.message ?? "not found"}`)
+  const model = parseBaseModel(data)
+  const { data: blob, error: dlErr } = await sb.storage
+    .from(model.bucket)
+    .download(model.storagePath)
+  if (dlErr || !blob) throw new Error(`Storage download 失敗: ${dlErr?.message ?? "no data"}`)
+  return { model, buffer: await blob.arrayBuffer() }
 }
 
 export interface ListBaseModelsOptions {
@@ -106,18 +136,32 @@ export async function listBaseModels(
   if (error) throw new Error(`DB query 失敗: ${error.message}`)
 
   const rows = data ?? []
-  const results: BaseModelWithUrl[] = []
-  for (const row of rows) {
-    const bm = parseBaseModel(row)
-    const signed = await sb.storage
-      .from(bm.bucket)
-      .createSignedUrl(bm.storagePath, SIGNED_URL_TTL_SECONDS)
-    results.push({
-      ...bm,
-      signedUrl: signed.data?.signedUrl ?? "",
-    })
-  }
-  return results
+  // バケットごとにグルーピングして createSignedUrls (バルク) を使用。
+  // 同一バケット 1 リクエストで全件分の URL が返るので、件数 N → API 呼び出し 1 回。
+  const byBucket = new Map<string, { paths: string[]; rowIndices: number[] }>()
+  rows.forEach((row, idx) => {
+    const entry = byBucket.get(row.bucket) ?? { paths: [], rowIndices: [] }
+    entry.paths.push(row.storage_path)
+    entry.rowIndices.push(idx)
+    byBucket.set(row.bucket, entry)
+  })
+
+  const urlByIndex = new Map<number, string>()
+  await Promise.all(
+    Array.from(byBucket.entries()).map(async ([bucket, entry]) => {
+      const { data: signed } = await sb.storage
+        .from(bucket)
+        .createSignedUrls(entry.paths, SIGNED_URL_TTL_SECONDS)
+      ;(signed ?? []).forEach((s, i) => {
+        if (s.signedUrl) urlByIndex.set(entry.rowIndices[i], s.signedUrl)
+      })
+    }),
+  )
+
+  return rows.map((row, idx) => ({
+    ...parseBaseModel(row),
+    signedUrl: urlByIndex.get(idx) ?? "",
+  }))
 }
 
 export async function updateBaseModel(

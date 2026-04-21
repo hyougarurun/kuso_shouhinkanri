@@ -8,6 +8,7 @@ import type {
   BaseModelPose,
 } from "@/types"
 import { BaseModelUploadDialog } from "@/components/base-models/BaseModelUploadDialog"
+import { GenerateVariationDialog } from "@/components/base-models/GenerateVariationDialog"
 
 interface BaseModelWithUrl extends BaseModel {
   signedUrl: string
@@ -29,6 +30,7 @@ export default function BaseModelsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [variationTarget, setVariationTarget] = useState<BaseModelWithUrl | null>(null)
   const [genderFilter, setGenderFilter] = useState<GenderFilter>("all")
   const [poseFilter, setPoseFilter] = useState<PoseFilter>("all")
   const [garmentFilter, setGarmentFilter] = useState<GarmentFilter>("all")
@@ -170,6 +172,10 @@ export default function BaseModelsPage() {
                   <img
                     src={m.signedUrl}
                     alt={m.variantLabel || m.id}
+                    width={m.width ?? 600}
+                    height={m.height ?? 600}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-contain"
                   />
                 ) : (
@@ -194,6 +200,14 @@ export default function BaseModelsPage() {
                     {m.variantLabel}
                   </span>
                 )}
+                {m.parentId && (
+                  <span
+                    className="absolute bottom-1 left-1 bg-amber-400/90 text-black text-[9px] font-bold px-1.5 py-0.5 rounded"
+                    title="派生生成（AI）"
+                  >
+                    🎨 派生
+                  </span>
+                )}
               </div>
               <div className="p-2 text-xs flex flex-col gap-1">
                 <div className="flex gap-1 flex-wrap">
@@ -214,8 +228,15 @@ export default function BaseModelsPage() {
                 )}
                 <div className="flex gap-1 mt-1">
                   <button
+                    onClick={() => setVariationTarget(m)}
+                    className="flex-1 text-[10px] bg-amber-100 hover:bg-amber-200 rounded px-2 py-1 font-semibold text-amber-900"
+                    title="派生バリエーション生成"
+                  >
+                    🎨 派生
+                  </button>
+                  <button
                     onClick={() => download(m)}
-                    className="flex-1 text-[10px] bg-zinc-100 hover:bg-zinc-200 rounded px-2 py-1 font-semibold text-zinc-700"
+                    className="text-[10px] bg-zinc-100 hover:bg-zinc-200 rounded px-2 py-1 font-semibold text-zinc-700"
                   >
                     DL
                   </button>
@@ -223,7 +244,7 @@ export default function BaseModelsPage() {
                     onClick={() => deleteModel(m)}
                     className="text-[10px] bg-red-50 hover:bg-red-100 rounded px-2 py-1 font-semibold text-red-600"
                   >
-                    削除
+                    ×
                   </button>
                 </div>
               </div>
@@ -236,6 +257,16 @@ export default function BaseModelsPage() {
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
         onUploaded={refresh}
+      />
+
+      <GenerateVariationDialog
+        open={!!variationTarget}
+        baseModelId={variationTarget?.id ?? null}
+        thumbUrl={variationTarget?.signedUrl}
+        parentLabel={variationTarget?.variantLabel}
+        parentGarment={variationTarget?.garmentType}
+        onClose={() => setVariationTarget(null)}
+        onGenerated={refresh}
       />
     </div>
   )

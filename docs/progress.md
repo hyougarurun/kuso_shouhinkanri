@@ -81,6 +81,12 @@
 - PoC-P9: 精度検証（MAPE < 20% 目標）
 
 ## 直近の完了タスク
+- 2026-04-21 **Phase 1.4b 実装完了（API キー設定待ち）**:
+  - **A. パフォーマンス改善**: `createSignedUrls` バルク取得（N 件 → 1 リクエスト）、`<img loading="lazy" decoding="async" width/height>` 設定。100 枚規模まで体感即時化
+  - **B. 派生系譜スキーマ**: `base_models` に `parent_id` / `target_garment` / `generation_prompt` / `generation_model` カラム追加（migration 適用済）
+  - **C. Gemini クライアント**: `lib/gemini/generateImage.ts` Nano Banana 直 API。SDK 不要、$0.039/枚、`buildGarmentSwapPrompt` でプリント保持の指示文生成
+  - **D. 派生生成 API + UI**: `POST /api/base-models/[id]/generate-variation`、`GenerateVariationDialog`（4 服種選択 + 追加指示 + モデル選択）、カードに「🎨 派生」ボタン、派生にはバッジ表示
+  - **E. 残**: k2 が `GEMINI_API_KEY` を `.env.local` に追加（取得: https://aistudio.google.com/apikey）
 - 2026-04-21 **入力履歴サジェスト共通基盤**: `lib/inputHistory.ts`（LocalStorage、最大30件/キー、新しい順、TC-IH-001〜010 全 PASS）+ `components/SuggestiveInput.tsx`（datalist + ▾ ボタン履歴一覧 + 個別×削除）。BaseModelUploadDialog / StepB（商品名・シリーズ・素材） / StepC（designDesc） / QuickEstimateCard（bodyCode・color）に適用。86/86 テスト PASS
 - 2026-04-21 **Phase 1.4a 完了**: base モデル画像基盤。Supabase `base_models` テーブル + Storage バケット（非公開、Signed URL 配信）、`/api/base-models/*`（upload/list/patch/delete）、`/base-models` グリッド UI + アップロードダイアログ + フィルタ（性別・ポーズ・服種・★）+ Sidebar 導線。10 プロンプトドラフト（`docs/design-notes/phase1.4a-prompts.md`）。TS/vitest 76/76 PASS。db push 適用済
 - 2026-04-20 **Phase 1.1-1.3 完全動作確認**: Supabase DB push 済、Drive フォルダ自動作成+ファイルアップ、Sheets 新規タブ「商品管理」に 8 列自動追記 + A 列に合成画像埋め込み（=IMAGE() + Drive 公開 URL）。60/60 テスト PASS
