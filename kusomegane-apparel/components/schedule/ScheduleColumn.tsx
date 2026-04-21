@@ -17,6 +17,10 @@ type Props = {
   products: Product[]
   onMove: (productId: string, from: string | null, to: string | null) => void
   isCurrent?: boolean
+  /** 下部ショーケースで現在選択されている月（同期表示用） */
+  selected?: boolean
+  /** ヘッダクリック時のコールバック（下部ショーケースを連動させる） */
+  onSelect?: () => void
 }
 
 export function ScheduleColumn({
@@ -26,6 +30,8 @@ export function ScheduleColumn({
   products,
   onMove,
   isCurrent,
+  selected,
+  onSelect,
 }: Props) {
   const [dragOver, setDragOver] = useState(false)
 
@@ -47,11 +53,13 @@ export function ScheduleColumn({
     onMove(id, from, month)
   }
 
-  const headerBg = month
-    ? isCurrent
-      ? "bg-brand-yellow text-black"
-      : "bg-zinc-100 text-zinc-700"
-    : "bg-zinc-200 text-zinc-600"
+  const headerBg = selected
+    ? "bg-indigo-500 text-white"
+    : month
+      ? isCurrent
+        ? "bg-brand-yellow text-black"
+        : "bg-zinc-100 text-zinc-700"
+      : "bg-zinc-200 text-zinc-600"
 
   return (
     <div
@@ -61,11 +69,16 @@ export function ScheduleColumn({
       className={`shrink-0 w-[160px] rounded-lg border transition ${
         dragOver
           ? "border-brand-yellow bg-amber-50"
-          : "border-zinc-200 bg-zinc-50"
+          : selected
+            ? "border-indigo-400 bg-indigo-50"
+            : "border-zinc-200 bg-zinc-50"
       }`}
     >
-      <div
-        className={`rounded-t-lg px-2 py-1.5 text-[11px] font-bold flex items-center justify-between ${headerBg}`}
+      <button
+        type="button"
+        onClick={onSelect}
+        className={`w-full text-left rounded-t-lg px-2 py-1.5 text-[11px] font-bold flex items-center justify-between transition cursor-pointer ${headerBg} ${onSelect ? "hover:brightness-95" : ""}`}
+        title={onSelect ? "クリックで下部に表示" : undefined}
       >
         <div>
           <div>{label}</div>
@@ -76,7 +89,7 @@ export function ScheduleColumn({
         <span className="text-[10px] font-bold bg-white/70 rounded px-1.5 py-0.5 text-zinc-800">
           {products.length}
         </span>
-      </div>
+      </button>
       <div className="p-1.5 space-y-1.5 min-h-[200px] max-h-[calc(100vh-250px)] overflow-y-auto">
         {products.map((p) => (
           <ScheduleCard

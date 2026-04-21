@@ -34,6 +34,20 @@ export interface ProductAssets {
   captionDone: boolean
 }
 
+/** 加工方法（正面/背面/袖に対して 1 つ選択 or 未設定） */
+export type ProcessingMethod = "ink" | "embroidery" | "dtf"
+
+/**
+ * 構造化された加工情報。シート E 列の "1.タグ付け / 2.正面インク" 表記の元データ。
+ * 既存の processingInstruction（自由文）は互換保持だが、新規入力はこちらを優先。
+ */
+export interface ProcessingDetails {
+  tagAttachment: boolean
+  front: ProcessingMethod | null
+  back: ProcessingMethod | null
+  sleeve: ProcessingMethod | null
+}
+
 export interface ProductImages {
   composite: string | null
   processing: string | null
@@ -78,6 +92,7 @@ export interface Product {
   sizes: string[]
   processingType: string
   processingInstruction: string
+  processingDetails?: ProcessingDetails
   bodyModelNumber: string
   material: string
   isMadeToOrder: boolean

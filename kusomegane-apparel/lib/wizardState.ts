@@ -1,5 +1,11 @@
-import { ImageAnalysis, Product, ProductEstimation } from "@/types"
+import {
+  ImageAnalysis,
+  ProcessingDetails,
+  Product,
+  ProductEstimation,
+} from "@/types"
 import { DEFAULT_MATERIAL } from "@/constants"
+import { emptyProcessingDetails } from "@/lib/processingSummary"
 import type {
   EstimationResult,
   NormalizedLocation,
@@ -22,6 +28,7 @@ export interface WizardBasic {
   sizes: string[]
   processingType: string
   processingInstruction: string
+  processingDetails: ProcessingDetails
   bodyModelNumber: string
   material: string
   isMadeToOrder: boolean
@@ -69,6 +76,7 @@ export function initialWizardState(): WizardState {
       sizes: [],
       processingType: "",
       processingInstruction: "",
+      processingDetails: emptyProcessingDetails(),
       bodyModelNumber: "",
       material: DEFAULT_MATERIAL,
       isMadeToOrder: true,
@@ -142,6 +150,7 @@ export function wizardToProducts(
       sizes: [...basic.sizes],
       processingType: basic.processingType,
       processingInstruction: basic.processingInstruction,
+      processingDetails: basic.processingDetails,
       bodyModelNumber: basic.bodyModelNumber,
       material: basic.material,
       isMadeToOrder: basic.isMadeToOrder,

@@ -1,21 +1,35 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Product } from "@/types"
 import { storage } from "@/lib/storage"
 import { ensureImages } from "@/lib/migrateProduct"
+import { generateMonthLabels } from "@/lib/schedule"
 import { ScheduleBoard } from "@/components/schedule/ScheduleBoard"
 import { MonthShowcase } from "@/components/schedule/MonthShowcase"
 
 export default function SchedulePage() {
   const [products, setProducts] = useState<Product[]>([])
   const [hydrated, setHydrated] = useState(false)
+  const [showcaseMonth, setShowcaseMonth] = useState<string>("")
+  const showcaseRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setProducts(storage.getProducts().map(ensureImages))
+    const firstMonth = generateMonthLabels()[0]?.value ?? ""
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShowcaseMonth(firstMonth)
     setHydrated(true)
   }, [])
+
+  function handleSelectShowcase(next: string) {
+    setShowcaseMonth(next)
+    // モバイル/狭い画面でも下部が見えるよう自動スクロール
+    requestAnimationFrame(() => {
+      showcaseRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    })
+  }
 
   const scheduledCount = products.filter(
     (p) => p.plannedMonths && p.plannedMonths.length > 0,
@@ -49,8 +63,19 @@ export default function SchedulePage() {
         </div>
       ) : (
         <>
-          <ScheduleBoard products={products} onUpdateProducts={setProducts} />
-          <MonthShowcase products={products} />
+          <ScheduleBoard
+            products={products}
+            onUpdateProducts={setProducts}
+            selectedShowcaseMonth={showcaseMonth}
+            onSelectShowcaseMonth={handleSelectShowcase}
+          />
+          <div ref={showcaseRef}>
+            <MonthShowcase
+              products={products}
+              value={showcaseMonth}
+              onChange={setShowcaseMonth}
+            />
+          </div>
         </>
       )}
     </div>

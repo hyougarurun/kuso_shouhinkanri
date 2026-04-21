@@ -1,6 +1,7 @@
 import { google } from "googleapis"
 import type { OAuth2Client } from "google-auth-library"
 import type { Product } from "@/types"
+import { resolveProcessingCellText } from "@/lib/processingSummary"
 import { createOAuth2Client } from "./auth"
 import {
   ensureProductFolder,
@@ -44,7 +45,7 @@ export function buildRowValues(
     product.productNumber, // B: 商品番号
     product.colors.join("・"), // C: 色
     product.sizes.join("・"), // D: サイズ
-    product.processingInstruction, // E: 加工
+    resolveProcessingCellText(product), // E: 加工（構造化が優先、無ければ自由文）
     product.bodyModelNumber, // F: ボディ型番
     product.driveFolderUrl, // G: デザインファイル（Drive URL）
     product.notes, // H: 備考
@@ -218,3 +219,57 @@ export async function registerProductToSheet(
 
 // 後方互換: 旧名からの alias
 export const registerProductToList1 = registerProductToSheet
+
+/**
+ * 商品番号に一致する行をシートから物理削除する。
+ * 行が無ければ何もしない（冪等）。
+ */
+export async function deleteProductFromSheet(
+  productNumber: string,
+  auth?: OAuth2Client,
+): Promise<{ deleted: boolean; rowNumber: number | null; sheetName: string }> {
+  const spreadsheetId = requireSpreadsheetId()
+  const sheetName = getTargetSheetName()
+  const oauthClient = auth ?? createOAuth2Client()
+  const client = sheetsClient(oauthClient)
+
+  const meta = await client.spreadsheets.get({ spreadsheetId })
+  const sheet = meta.data.sheets?.find(
+    (s) => s.properties?.title === sheetName,
+  )
+  const sheetId = sheet?.properties?.sheetId
+  if (sheetId === undefined || sheetId === null) {
+    return { deleted: false, rowNumber: null, sheetName }
+  }
+
+  const rowNumber = await findExistingRow(
+    client,
+    spreadsheetId,
+    sheetName,
+    productNumber,
+  )
+  if (!rowNumber) {
+    return { deleted: false, rowNumber: null, sheetName }
+  }
+
+  await client.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId,
+              dimension: "ROWS",
+              // deleteDimension は 0-indexed、終端 exclusive
+              startIndex: rowNumber - 1,
+              endIndex: rowNumber,
+            },
+          },
+        },
+      ],
+    },
+  })
+
+  return { deleted: true, rowNumber, sheetName }
+}

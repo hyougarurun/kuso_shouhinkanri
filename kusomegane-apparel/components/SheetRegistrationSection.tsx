@@ -53,8 +53,47 @@ export function SheetRegistrationSection({ product, onUpdate }: Props) {
     }
   }
 
-  function unregister() {
-    // ローカル記録のみリセット（シート上の行は残す。手動で消す想定）
+  async function unregisterFromSheet() {
+    if (
+      !confirm(
+        `シートから商品番号「${product.productNumber}」の行を削除します。よろしいですか？`,
+      )
+    )
+      return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/sheets/unregister", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productNumber: product.productNumber }),
+      })
+      const data = (await res.json()) as
+        | { deleted: boolean; rowNumber: number | null; sheetName: string }
+        | { error: string }
+      if (!res.ok || "error" in data) {
+        throw new Error(
+          "error" in data ? data.error : `削除失敗（HTTP ${res.status}）`,
+        )
+      }
+      const now = new Date().toISOString()
+      onUpdate({
+        ...product,
+        sheetRegisteredAt: undefined,
+        sheetRowNumber: undefined,
+        updatedAt: now,
+      })
+      setLastResult(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function clearLocalOnly() {
+    if (!confirm("ローカル記録のみクリアします（シート行はそのまま）。よろしいですか？"))
+      return
     onUpdate({
       ...product,
       sheetRegisteredAt: undefined,
@@ -83,27 +122,36 @@ export function SheetRegistrationSection({ product, onUpdate }: Props) {
 
       {registered ? (
         <div className="space-y-2 pt-1">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] text-zinc-600">
-              {new Date(product.sheetRegisteredAt!).toLocaleString("ja-JP")} に登録
-              {product.sheetRowNumber !== undefined &&
-                ` (行 ${product.sheetRowNumber})`}
-            </p>
+          <p className="text-[11px] text-zinc-600">
+            {new Date(product.sheetRegisteredAt!).toLocaleString("ja-JP")} に登録
+            {product.sheetRowNumber !== undefined &&
+              ` (行 ${product.sheetRowNumber})`}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={unregister}
-              className="text-[11px] text-zinc-500 hover:text-red-600 underline"
+              onClick={register}
+              disabled={loading}
+              className="rounded-md border border-zinc-300 bg-white text-zinc-900 text-sm font-bold py-2 hover:bg-zinc-50 disabled:opacity-50 transition"
             >
-              登録を取り消す
+              {loading ? "処理中…" : "シートを上書き更新"}
+            </button>
+            <button
+              type="button"
+              onClick={unregisterFromSheet}
+              disabled={loading}
+              className="rounded-md border border-red-300 bg-white text-red-700 text-sm font-bold py-2 hover:bg-red-50 disabled:opacity-50 transition"
+            >
+              {loading ? "処理中…" : "シートから削除"}
             </button>
           </div>
           <button
             type="button"
-            onClick={register}
+            onClick={clearLocalOnly}
             disabled={loading}
-            className="w-full rounded-md border border-zinc-300 bg-white text-zinc-900 text-sm font-bold py-2 hover:bg-zinc-50 disabled:opacity-50 transition"
+            className="text-[11px] text-zinc-500 hover:text-red-600 underline"
           >
-            {loading ? "更新中…" : "シートを最新に更新する"}
+            ローカル記録のみクリア（シートは残す）
           </button>
         </div>
       ) : (

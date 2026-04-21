@@ -9,6 +9,7 @@ import {
 import { Chip } from "@/components/ui/Chip"
 import { Field } from "@/components/ui/Field"
 import { SuggestiveInput } from "@/components/SuggestiveInput"
+import { ProcessingDetailsEditor } from "./ProcessingDetailsEditor"
 import { WizardBasic, validateBasic } from "@/lib/wizardState"
 import { getColorStyle } from "@/lib/colorPalette"
 import { getBodyModels, getMaterialForModel } from "@/lib/bodyModelStore"
@@ -114,11 +115,19 @@ export function StepB_BasicInfo({
         </div>
       </Field>
 
-      <Field label="加工指示" hint="メーカーに伝える加工内容">
+      <Field label="加工詳細" hint="シート E 列に「1.タグ付け / 2.正面インク…」形式で書き込まれます">
+        <ProcessingDetailsEditor
+          value={basic.processingDetails}
+          onChange={(next) => onChange({ processingDetails: next })}
+        />
+      </Field>
+
+      <Field label="加工指示（自由文・任意）" hint="構造化で足りない補足があれば記入">
         <textarea
           value={basic.processingInstruction}
           onChange={(e) => onChange({ processingInstruction: e.target.value })}
           rows={2}
+          placeholder="例: DTFは厚盛り気味で。袖の刺繍は黄色糸 3mm。"
           className="w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
         />
       </Field>

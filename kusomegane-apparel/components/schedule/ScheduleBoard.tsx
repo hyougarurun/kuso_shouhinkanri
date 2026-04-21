@@ -13,9 +13,20 @@ import { ScheduleColumn } from "./ScheduleColumn"
 type Props = {
   products: Product[]
   onUpdateProducts: (next: Product[]) => void
+  /** ショーケースで選択中の月（"YYYY-MM" / "__unassigned__"）。ハイライト用 */
+  selectedShowcaseMonth?: string
+  /** 月カラムのヘッダをタップした時のコールバック */
+  onSelectShowcaseMonth?: (next: string) => void
 }
 
-export function ScheduleBoard({ products, onUpdateProducts }: Props) {
+const UNASSIGNED_SHOWCASE = "__unassigned__"
+
+export function ScheduleBoard({
+  products,
+  onUpdateProducts,
+  selectedShowcaseMonth,
+  onSelectShowcaseMonth,
+}: Props) {
   const monthLabels = generateMonthLabels()
   const currentMonth = monthLabels[0]?.value
 
@@ -41,6 +52,12 @@ export function ScheduleBoard({ products, onUpdateProducts }: Props) {
         sublabel="目安なし"
         products={unassigned}
         onMove={handleMove}
+        selected={selectedShowcaseMonth === UNASSIGNED_SHOWCASE}
+        onSelect={
+          onSelectShowcaseMonth
+            ? () => onSelectShowcaseMonth(UNASSIGNED_SHOWCASE)
+            : undefined
+        }
       />
       {monthLabels.map((m) => {
         const [year, mm] = m.value.split("-")
@@ -54,6 +71,12 @@ export function ScheduleBoard({ products, onUpdateProducts }: Props) {
             products={productsForMonth(products, m.value)}
             onMove={handleMove}
             isCurrent={isCurrent}
+            selected={selectedShowcaseMonth === m.value}
+            onSelect={
+              onSelectShowcaseMonth
+                ? () => onSelectShowcaseMonth(m.value)
+                : undefined
+            }
           />
         )
       })}

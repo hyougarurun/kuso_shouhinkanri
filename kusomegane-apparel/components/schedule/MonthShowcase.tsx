@@ -9,20 +9,28 @@ import {
 } from "@/lib/schedule"
 import { ProductCardVertical } from "@/components/ProductCardVertical"
 
-const UNASSIGNED = "__unassigned__"
+export const SCHEDULE_UNASSIGNED = "__unassigned__"
+const UNASSIGNED = SCHEDULE_UNASSIGNED
 
 type Props = {
   products: Product[]
+  value?: string
+  onChange?: (next: string) => void
 }
 
 /**
  * 販売スケジュール下部の月別ショーケース。
  * 月を 1 つ選ぶと、その月に割り当てられた商品を縦型カードで横並び表示する。
  * 横スクロールで全件閲覧可能。
+ *
+ * 親から value/onChange を渡すと controlled 動作（ScheduleBoard の月タップと連動）。
+ * 省略時は内部 state でフォールバック。
  */
-export function MonthShowcase({ products }: Props) {
+export function MonthShowcase({ products, value, onChange }: Props) {
   const months = useMemo(() => generateMonthLabels(), [])
-  const [selectedMonth, setSelectedMonth] = useState<string>(months[0]?.value ?? "")
+  const [internal, setInternal] = useState<string>(months[0]?.value ?? "")
+  const selectedMonth = value ?? internal
+  const setSelectedMonth = onChange ?? setInternal
 
   const displayed = useMemo(() => {
     if (!selectedMonth) return []
