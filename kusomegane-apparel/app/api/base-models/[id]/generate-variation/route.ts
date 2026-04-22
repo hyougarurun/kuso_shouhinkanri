@@ -121,7 +121,7 @@ export async function POST(req: Request, ctx: Context): Promise<Response> {
         prompt: fullPrompt,
         model: modelId ?? "gpt-image-2",
         quality: quality ?? "medium",
-        size: (size as OpenAIImageSize | undefined) ?? "1024x1536",
+        size: (size as OpenAIImageSize | undefined) ?? "1024x1024",
       })
       resultBase64 = generated.base64
       resultMime = generated.mimeType

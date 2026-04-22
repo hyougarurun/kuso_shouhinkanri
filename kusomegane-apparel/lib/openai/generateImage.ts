@@ -99,7 +99,9 @@ export async function generateImage(
 
   const model = input.model ?? "gpt-image-2"
   const quality = input.quality ?? "medium"
-  const size = input.size ?? "1024x1536"
+  // base モデルはスクエア投入が主なので既定もスクエアに揃える。
+  // High だけ 2:3 で返って縦長化する問題の対策（1024x1536 → 1024x1024）。
+  const size = input.size ?? "1024x1024"
 
   const form = new FormData()
   form.append("model", model)
