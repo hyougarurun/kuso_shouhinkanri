@@ -35,6 +35,7 @@ export default function CreatorBackgroundsPage() {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string>("")
   const [promptExtra, setPromptExtra] = useState("")
+  const [promptMode, setPromptMode] = useState<"append" | "replace">("append")
   const [title, setTitle] = useState("")
   const [size, setSize] = useState("2048x2048")
   const [quality, setQuality] = useState("high")
@@ -102,6 +103,7 @@ export default function CreatorBackgroundsPage() {
       const form = new FormData()
       form.append("file", file)
       form.append("prompt", promptExtra)
+      form.append("promptMode", promptMode)
       form.append("size", size)
       form.append("quality", quality)
       form.append("title", title)
@@ -233,16 +235,54 @@ export default function CreatorBackgroundsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-zinc-700 mb-1">
-              追加指示（任意）
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-zinc-700">
+                {promptMode === "append" ? "追加指示（任意）" : "プロンプト（完全上書き）"}
+              </label>
+              <div className="inline-flex rounded-md bg-zinc-100 p-0.5 text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setPromptMode("append")}
+                  className={
+                    "px-2 py-0.5 rounded " +
+                    (promptMode === "append"
+                      ? "bg-white text-zinc-900 shadow-sm font-bold"
+                      : "text-zinc-500")
+                  }
+                >
+                  既定+追加
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPromptMode("replace")}
+                  className={
+                    "px-2 py-0.5 rounded " +
+                    (promptMode === "replace"
+                      ? "bg-white text-zinc-900 shadow-sm font-bold"
+                      : "text-zinc-500")
+                  }
+                >
+                  完全上書き
+                </button>
+              </div>
+            </div>
             <SuggestiveInput
               historyKey="creator.bg.promptExtra"
               value={promptExtra}
               onChange={setPromptExtra}
-              placeholder="例: 夕焼け寄せて / 線画強調 / 明るく"
+              placeholder={
+                promptMode === "append"
+                  ? "例: 夕焼け寄せて / 線画強調 / 明るく"
+                  : "例: flat vector landscape illustration, soft lighting, no humans"
+              }
               className="w-full text-sm border border-zinc-300 rounded px-2 py-1"
             />
+            {promptMode === "replace" && (
+              <p className="text-[10px] text-amber-700 mt-1">
+                ⚠ 既定プロンプトを使わず、ここに書いた文字列だけでリクエストします。
+                safety 回避用の脱出口。
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2">
