@@ -12,11 +12,12 @@ type Props = {
 }
 
 async function fileToGalleryImage(file: File): Promise<GalleryImage> {
-  // LocalStorage 容量対策: 長辺 600px、JPEG 強制、quality 0.7 に固定。
-  // 1 枚あたり 30〜80 KB 程度に収める。
+  // 長辺 1600px、JPEG 強制、quality 0.88 で保存。
+  // 1 枚あたり 250〜500 KB 程度。Safari の LocalStorage 5MB 上限があるので、
+  // 1 商品あたり gallery は 6 枚程度が目安（将来 IndexedDB 移行を推奨）。
   const resized = await resizeImage(file, {
-    maxSize: 600,
-    quality: 0.7,
+    maxSize: 1600,
+    quality: 0.88,
     forceJpeg: true,
   })
   const sizeEstimate = Math.floor(resized.base64.length * 0.75)
@@ -247,7 +248,7 @@ export function GallerySection({ product, onUpdate }: Props) {
               />
             </label>
             <p className="text-[10px] text-zinc-400 mt-2">
-              複数選択可 · 自動で長辺 800px に縮小 · 追加した順に並びます
+              複数選択可 · 自動で長辺 1600px / JPEG q=0.88 に最適化 · 追加した順に並びます
             </p>
           </>
         )}
