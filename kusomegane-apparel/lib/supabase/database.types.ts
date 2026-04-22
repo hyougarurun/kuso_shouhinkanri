@@ -104,6 +104,19 @@ export type ProductImageRow = {
   created_at: string
 }
 
+export type ProductGalleryItemRow = {
+  id: string
+  product_id: string
+  storage_path: string
+  bucket: string
+  mime_type: string
+  size_bytes: number | null
+  width: number | null
+  height: number | null
+  sort_order: number
+  created_at: string
+}
+
 export type ProductDriveFileRow = {
   id: string
   product_id: string
@@ -169,6 +182,15 @@ export type Database = {
           created_at?: string
         }
         Update: Partial<ProductImageRow>
+        Relationships: []
+      }
+      product_gallery_items: {
+        Row: ProductGalleryItemRow
+        Insert: Omit<ProductGalleryItemRow, "id" | "created_at"> & {
+          id?: string
+          created_at?: string
+        }
+        Update: Partial<ProductGalleryItemRow>
         Relationships: []
       }
       product_drive_files: {

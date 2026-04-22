@@ -1,6 +1,7 @@
 import JSZip from "jszip"
 import { Product } from "@/types"
 import { ensureImages } from "@/lib/migrateProduct"
+import { listGalleryRemote } from "@/lib/galleryClient"
 
 export function buildProductInfoText(product: Product): string {
   return [
@@ -9,7 +10,6 @@ export function buildProductInfoText(product: Product): string {
     `シリーズ: ${product.series}`,
     `カラー: ${product.colors.join("・")}`,
     `サイズ: ${product.sizes.join("/")}`,
-    `加工種別: ${product.processingType}`,
     `加工指示: ${product.processingInstruction}`,
     `ボディ型番: ${product.bodyModelNumber}`,
     `素材: ${product.material}`,
@@ -42,18 +42,61 @@ function extensionFromMime(mime: string): string {
   return "bin"
 }
 
-function addProductToZip(product: Product, zip: JSZip): void {
+async function fetchBinary(url: string): Promise<Uint8Array | null> {
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    return new Uint8Array(await res.arrayBuffer())
+  } catch {
+    return null
+  }
+}
+
+async function addProductToZip(product: Product, zip: JSZip): Promise<void> {
   const migrated = ensureImages(product)
   const folder = zip.folder(productFolderName(migrated))
   if (!folder) return
 
   const gallery = migrated.gallery ?? []
-  gallery.forEach((img, i) => {
+
+  // Supabase Storage 上のアイテムは signed URL を取得してバイナリ DL
+  const hasStorage = gallery.some((g) => g.storagePath)
+  const signedUrlById: Record<string, string> = {}
+  if (hasStorage) {
+    try {
+      const items = await listGalleryRemote(migrated.id)
+      for (const it of items) signedUrlById[it.id] = it.signedUrl
+    } catch {
+      // フォールバックで thumbDataUrl を使う（低解像度だが ZIP 破綻は避ける）
+    }
+  }
+
+  for (let i = 0; i < gallery.length; i++) {
+    const img = gallery[i]
     const ext = extensionFromMime(img.mimeType)
     const prefix = String(i + 1).padStart(2, "0")
     const suffix = i === 0 ? "（サムネ）" : ""
-    folder.file(`${prefix}${suffix}.${ext}`, dataUrlToUint8Array(img.dataUrl))
-  })
+    const filename = `${prefix}${suffix}.${ext}`
+
+    // 1) signed URL（フル解像度）
+    const signed = signedUrlById[img.id]
+    if (signed) {
+      const bin = await fetchBinary(signed)
+      if (bin) {
+        folder.file(filename, bin)
+        continue
+      }
+    }
+    // 2) レガシー dataUrl
+    if (img.dataUrl) {
+      folder.file(filename, dataUrlToUint8Array(img.dataUrl))
+      continue
+    }
+    // 3) サムネのみ（最悪の場合）
+    if (img.thumbDataUrl) {
+      folder.file(filename, dataUrlToUint8Array(img.thumbDataUrl))
+    }
+  }
 
   // gallery が空だが imagePreview のみある場合のフォールバック
   if (gallery.length === 0 && migrated.imagePreview) {
@@ -72,14 +115,15 @@ function addProductToZip(product: Product, zip: JSZip): void {
 
 export async function exportProductZip(product: Product): Promise<Blob> {
   const zip = new JSZip()
-  addProductToZip(product, zip)
+  await addProductToZip(product, zip)
   return zip.generateAsync({ type: "blob" })
 }
 
 export async function exportProductsZip(products: Product[]): Promise<Blob> {
   const zip = new JSZip()
+  // 商品ごとに直列処理（並列だと fetch スパイクで失敗しやすい）
   for (const product of products) {
-    addProductToZip(product, zip)
+    await addProductToZip(product, zip)
   }
   return zip.generateAsync({ type: "blob" })
 }

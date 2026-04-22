@@ -26,7 +26,7 @@ describe("buildProductInfoText", () => {
     expect(text).toContain("シリーズ: テストシリーズ")
     expect(text).toContain("カラー: ブラック・ホワイト")
     expect(text).toContain("サイズ: S/M/L")
-    expect(text).toContain("加工種別: DTF")
+    // 加工種別フィールドは T1 で UI 削除、ZIP 出力からも除去済み
     expect(text).toContain("加工指示: 前面にプリント")
     expect(text).toContain("ボディ型番: 5001-01")
     expect(text).toContain("素材: 綿100% 5.6oz")

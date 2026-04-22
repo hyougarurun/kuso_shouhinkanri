@@ -74,9 +74,24 @@ export interface DriveFile {
 
 export interface GalleryImage {
   id: string
-  dataUrl: string
+  /**
+   * 300px サムネの dataUrl。一覧表示用（LocalStorage 内で完結、高速）。
+   * Supabase 移行後の新規画像は必ずこちらを持つ。
+   */
+  thumbDataUrl?: string
+  /**
+   * 【レガシー】旧実装で LocalStorage にフル解像度 dataUrl を保存していたフィールド。
+   * 次回ロード時に自動で Supabase Storage へ移行される（migrateLegacyGalleryItem）。
+   */
+  dataUrl?: string
+  /** Supabase Storage 上のパス（新実装）。存在すれば Signed URL で拡大表示 */
+  storagePath?: string
+  /** Supabase Storage バケット（既定 product-gallery） */
+  bucket?: string
   mimeType: string
   sizeBytes?: number
+  width?: number
+  height?: number
   addedAt: string
 }
 

@@ -9,6 +9,7 @@ import { getProductStatus } from "@/lib/productStatus"
 import { computeSampleCountdown } from "@/lib/sampleCountdown"
 import { duplicateProduct } from "@/lib/productDuplicate"
 import { ensureImages } from "@/lib/migrateProduct"
+import { migrateDataUrlToStorage } from "@/lib/galleryClient"
 import { exportProductZip, downloadBlob } from "@/lib/exportZip"
 import { StatusBadge } from "@/components/StatusBadge"
 import { StepTimeline } from "@/components/StepTimeline"
@@ -39,9 +40,46 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (!id) return
     const found = storage.getProducts().find((p) => p.id === id) ?? null
+    const initial = found ? ensureImages(found) : null
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProduct(found ? ensureImages(found) : null)
+    setProduct(initial)
     setLoaded(true)
+
+    // レガシー gallery（dataUrl のみ、storagePath 無し）を Supabase Storage に自動移行。
+    // 失敗した項目は元のまま残すので壊れない。
+    if (initial && initial.gallery && initial.gallery.length > 0) {
+      const legacy = initial.gallery.filter(
+        (g) => g.dataUrl && !g.storagePath,
+      )
+      if (legacy.length > 0) {
+        ;(async () => {
+          const updated = [...initial.gallery!]
+          let changed = false
+          for (let i = 0; i < updated.length; i++) {
+            const g = updated[i]
+            if (!g.dataUrl || g.storagePath) continue
+            const migrated = await migrateDataUrlToStorage(initial.id, g)
+            if (migrated) {
+              updated[i] = migrated
+              changed = true
+            }
+          }
+          if (changed) {
+            const next = {
+              ...initial,
+              gallery: updated,
+              imagePreview:
+                updated[0]?.thumbDataUrl ??
+                updated[0]?.dataUrl ??
+                initial.imagePreview,
+              updatedAt: new Date().toISOString(),
+            }
+            setProduct(next)
+            storage.upsertProduct(next)
+          }
+        })()
+      }
+    }
   }, [id])
 
   const countdown = useMemo(() => {

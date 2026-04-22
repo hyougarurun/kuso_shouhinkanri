@@ -36,6 +36,10 @@ export function GalleryLightbox({ images, index, onClose, onChange }: Props) {
 
   if (!current) return null
 
+  // GallerySection 側で signedUrl（フル解像度）を thumbDataUrl に差し込む設計。
+  // なければ dataUrl（レガシー）にフォールバック。
+  const imageSrc = current.thumbDataUrl ?? current.dataUrl ?? ""
+
   return (
     <div
       className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4"
@@ -70,7 +74,7 @@ export function GalleryLightbox({ images, index, onClose, onChange }: Props) {
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={current.dataUrl}
+          src={imageSrc}
           alt={`gallery-${index + 1}`}
           className="max-w-[92vw] max-h-[82vh] object-contain rounded-md shadow-2xl bg-zinc-900"
         />
