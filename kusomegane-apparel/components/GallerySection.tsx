@@ -4,6 +4,7 @@ import { useState } from "react"
 import { v4 as uuid } from "uuid"
 import { Product, GalleryImage } from "@/types"
 import { resizeImage } from "@/lib/imageResize"
+import { GalleryLightbox } from "./GalleryLightbox"
 
 type Props = {
   product: Product
@@ -41,6 +42,7 @@ export function GallerySection({ product, onUpdate }: Props) {
   const [uploading, setUploading] = useState(false)
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
   const [overIndex, setOverIndex] = useState<number | null>(null)
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   function commitGallery(next: GalleryImage[]) {
@@ -170,14 +172,18 @@ export function GallerySection({ product, onUpdate }: Props) {
                 onDragOver={(e) => onCardDragOver(e, i)}
                 onDrop={(e) => onCardDrop(e, i)}
                 onDragEnd={onCardDragEnd}
-                className={`relative aspect-square rounded-md overflow-hidden border bg-zinc-100 select-none cursor-grab active:cursor-grabbing transition ${
+                onClick={() => setPreviewIndex(i)}
+                className={`relative aspect-square rounded-md overflow-hidden border bg-zinc-100 select-none cursor-zoom-in active:cursor-grabbing transition ${
                   isDragging
                     ? "opacity-30"
                     : isOver
                       ? "ring-2 ring-brand-yellow"
                       : "border-zinc-200"
                 }`}
-                title={img.mimeType + (img.sizeBytes ? ` · ${formatSize(img.sizeBytes)}` : "")}
+                title={
+                  "クリックで拡大 / ドラッグで並び替え" +
+                  (img.sizeBytes ? ` · ${formatSize(img.sizeBytes)}` : "")
+                }
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -196,7 +202,10 @@ export function GallerySection({ product, onUpdate }: Props) {
                 </span>
                 <button
                   type="button"
-                  onClick={() => removeAt(i)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removeAt(i)
+                  }}
                   className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white text-[11px] flex items-center justify-center hover:bg-black/90"
                   aria-label="削除"
                 >
@@ -248,6 +257,15 @@ export function GallerySection({ product, onUpdate }: Props) {
         <div className="rounded-md bg-red-50 border border-red-200 p-2 text-[11px] text-red-700">
           {error}
         </div>
+      )}
+
+      {previewIndex !== null && gallery[previewIndex] && (
+        <GalleryLightbox
+          images={gallery}
+          index={previewIndex}
+          onClose={() => setPreviewIndex(null)}
+          onChange={(next) => setPreviewIndex(next)}
+        />
       )}
     </div>
   )
