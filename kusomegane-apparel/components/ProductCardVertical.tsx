@@ -34,7 +34,8 @@ function ProductCardVerticalImpl({
     product.steps.find((s) => s.stepNumber === 5)?.status === "done"
 
   const gallery = product.gallery ?? []
-  const mainImage = gallery[0]?.dataUrl ?? product.imagePreview
+  const mainImage =
+    gallery[0]?.thumbDataUrl ?? gallery[0]?.dataUrl ?? product.imagePreview
 
   function onClick() {
     router.push(`/products/${product.id}`)

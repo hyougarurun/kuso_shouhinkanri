@@ -23,7 +23,9 @@ function ProductCardImpl({ product }: { product: Product }) {
   const hasSheet = !!product.sheetRegisteredAt
 
   const gallery = product.gallery ?? []
-  const mainImage = gallery[0]?.dataUrl ?? product.imagePreview
+  // 300px サムネ（Supabase 移行後）を優先、旧 dataUrl はレガシーフォールバック
+  const mainImage =
+    gallery[0]?.thumbDataUrl ?? gallery[0]?.dataUrl ?? product.imagePreview
   const subThumbs = gallery.slice(1, 6) // 2〜6 枚目を横並び表示
 
   function onDragStart(e: React.DragEvent<HTMLDivElement>) {
@@ -102,16 +104,20 @@ function ProductCardImpl({ product }: { product: Product }) {
         {/* 追加画像サムネ 2〜6 枚目（1.5倍化: 40 → 60px） */}
         {subThumbs.length > 0 && (
           <div className="flex gap-1.5 mt-2">
-            {subThumbs.map((img) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={img.id}
-                src={img.dataUrl}
-                alt="thumb"
-                draggable={false}
-                className="w-[60px] h-[60px] rounded object-cover border border-zinc-200 pointer-events-none"
-              />
-            ))}
+            {subThumbs.map((img) => {
+              const src = img.thumbDataUrl ?? img.dataUrl ?? ""
+              if (!src) return null
+              return (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={img.id}
+                  src={src}
+                  alt="thumb"
+                  draggable={false}
+                  className="w-[60px] h-[60px] rounded object-cover border border-zinc-200 pointer-events-none"
+                />
+              )
+            })}
             {gallery.length > 6 && (
               <div className="w-[60px] h-[60px] rounded border border-zinc-200 bg-zinc-100 flex items-center justify-center text-xs text-zinc-500 font-bold">
                 +{gallery.length - 6}
