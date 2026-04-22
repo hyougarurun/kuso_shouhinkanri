@@ -1042,10 +1042,63 @@ function openDB(){
     req.onerror=e=>ng(e.target.error);
   });
 }
-function dbPut(store,data){return openDB().then(db=>new Promise((ok,ng)=>{const tx=db.transaction(store,'readwrite');tx.objectStore(store).put(data);tx.oncomplete=()=>ok();tx.onerror=e=>ng(e.target.error);}));}
-function dbGet(store,id){return openDB().then(db=>new Promise((ok,ng)=>{const tx=db.transaction(store);const req=tx.objectStore(store).get(id);req.onsuccess=()=>ok(req.result);req.onerror=e=>ng(e.target.error);}));}
-function dbGetAll(store){return openDB().then(db=>new Promise((ok,ng)=>{const tx=db.transaction(store);const req=tx.objectStore(store).getAll();req.onsuccess=()=>ok(req.result);req.onerror=e=>ng(e.target.error);}));}
-function dbDelete(store,id){return openDB().then(db=>new Promise((ok,ng)=>{const tx=db.transaction(store,'readwrite');tx.objectStore(store).delete(id);tx.oncomplete=()=>ok();tx.onerror=e=>ng(e.target.error);}));}
+// ── Supabase 経由のライブラリ永続化（2026-04-22: IndexedDB から移行） ──
+// kusomegane-apparel 内で iframe 表示している場合、API Routes 経由で Supabase に読み書きする。
+// スタンドアロン動作時は失敗するので、フォールバックで IndexedDB を使う（openDB は維持）。
+// 既存の dbPut/dbGet/dbGetAll/dbDelete の呼び出し側は変えない。
+function _animatorApiBase(){return '/api/animator/library';}
+function _blobToDataUrl(blob){
+  return new Promise((ok,ng)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=ng;r.readAsDataURL(blob);});
+}
+async function dbPut(store,data){
+  try{
+    if(store==='assets'&&data.blob instanceof Blob){
+      data={...data,blob:await _blobToDataUrl(data.blob)};
+    }
+    const res=await fetch(`${_animatorApiBase()}/${store}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({error:'unknown'}))).error||'put failed');
+  }catch(e){
+    console.warn('[animator] Supabase put failed, fallback to IndexedDB:',e);
+    return openDB().then(db=>new Promise((ok,ng)=>{const tx=db.transaction(store,'readwrite');tx.objectStore(store).put(data);tx.oncomplete=()=>ok();tx.onerror=e=>ng(e.target.error);}));
+  }
+}
+async function dbGet(store,id){
+  try{
+    const res=await fetch(`${_animatorApiBase()}/${store}/${encodeURIComponent(id)}`);
+    if(res.status===404)return null;
+    if(!res.ok)throw new Error((await res.json().catch(()=>({error:'unknown'}))).error||'get failed');
+    const j=await res.json();
+    const item=j.item;
+    if(store==='assets'&&item&&item.blobUrl){
+      const br=await fetch(item.blobUrl);
+      if(br.ok)item.blob=await br.blob();
+    }
+    return item;
+  }catch(e){
+    console.warn('[animator] Supabase get failed, fallback to IndexedDB:',e);
+    return openDB().then(db=>new Promise((ok,ng)=>{const tx=db.transaction(store);const req=tx.objectStore(store).get(id);req.onsuccess=()=>ok(req.result);req.onerror=e=>ng(e.target.error);}));
+  }
+}
+async function dbGetAll(store){
+  try{
+    const res=await fetch(`${_animatorApiBase()}/${store}`);
+    if(!res.ok)throw new Error('list failed');
+    const j=await res.json();
+    return j.items||[];
+  }catch(e){
+    console.warn('[animator] Supabase list failed, fallback to IndexedDB:',e);
+    return openDB().then(db=>new Promise((ok,ng)=>{const tx=db.transaction(store);const req=tx.objectStore(store).getAll();req.onsuccess=()=>ok(req.result);req.onerror=e=>ng(e.target.error);}));
+  }
+}
+async function dbDelete(store,id){
+  try{
+    const res=await fetch(`${_animatorApiBase()}/${store}/${encodeURIComponent(id)}`,{method:'DELETE'});
+    if(!res.ok)throw new Error('delete failed');
+  }catch(e){
+    console.warn('[animator] Supabase delete failed, fallback to IndexedDB:',e);
+    return openDB().then(db=>new Promise((ok,ng)=>{const tx=db.transaction(store,'readwrite');tx.objectStore(store).delete(id);tx.oncomplete=()=>ok();tx.onerror=e=>ng(e.target.error);}));
+  }
+}
 
 // ══ LIBRARY ══
 let libTab='projects',libFolder='';

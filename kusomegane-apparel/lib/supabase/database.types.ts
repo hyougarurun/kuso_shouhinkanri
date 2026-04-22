@@ -128,6 +128,40 @@ export type ProductDriveFileRow = {
   uploaded_at: string
 }
 
+export type AnimatorProjectRow = {
+  id: string
+  name: string
+  folder: string
+  frame_count: number
+  fps: number | null
+  platform: string | null
+  motion_id: string | null
+  data_path: string
+  thumbnail_path: string | null
+  size_bytes: number | null
+  created_at: string
+  updated_at: string
+}
+
+export type AnimatorAssetRow = {
+  id: string
+  name: string
+  folder: string
+  format: string | null
+  size_kb: number | null
+  data_path: string
+  thumbnail_path: string | null
+  created_at: string
+}
+
+export type AnimatorFolderRow = {
+  id: string
+  name: string
+  tab: string
+  parent: string
+  created_at: string
+}
+
 export type CreatorBackgroundRow = {
   id: string
   storage_path: string
@@ -220,6 +254,31 @@ export type Database = {
           uploaded_at?: string
         }
         Update: Partial<ProductDriveFileRow>
+        Relationships: []
+      }
+      animator_projects: {
+        Row: AnimatorProjectRow
+        Insert: Omit<AnimatorProjectRow, "created_at" | "updated_at"> & {
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<AnimatorProjectRow>
+        Relationships: []
+      }
+      animator_assets: {
+        Row: AnimatorAssetRow
+        Insert: Omit<AnimatorAssetRow, "created_at"> & {
+          created_at?: string
+        }
+        Update: Partial<AnimatorAssetRow>
+        Relationships: []
+      }
+      animator_folders: {
+        Row: AnimatorFolderRow
+        Insert: Omit<AnimatorFolderRow, "created_at"> & {
+          created_at?: string
+        }
+        Update: Partial<AnimatorFolderRow>
         Relationships: []
       }
       creator_backgrounds: {

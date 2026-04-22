@@ -136,6 +136,17 @@ export default function CreatorBackgroundsPage() {
     if (res.ok) refresh()
   }
 
+  async function renameTitle(bg: Background) {
+    const next = window.prompt("タイトルを変更:", bg.title || "")
+    if (next === null) return
+    const res = await fetch(`/api/creator/backgrounds/${bg.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: next.trim() }),
+    })
+    if (res.ok) refresh()
+  }
+
   async function remove(bg: Background) {
     if (!confirm(`「${bg.title || bg.id.slice(0, 8)}」を削除しますか？`)) return
     const res = await fetch(`/api/creator/backgrounds/${bg.id}`, { method: "DELETE" })
@@ -406,11 +417,17 @@ export default function CreatorBackgroundsPage() {
                     </button>
                   </div>
                   <div className="p-2 text-xs space-y-1">
-                    {bg.title && (
-                      <div className="font-bold text-zinc-900 truncate">
-                        {bg.title}
-                      </div>
-                    )}
+                    <button
+                      onClick={() => renameTitle(bg)}
+                      className="w-full text-left font-bold text-zinc-900 truncate hover:text-amber-700 transition"
+                      title="クリックでタイトル編集"
+                    >
+                      {bg.title || (
+                        <span className="text-zinc-400 font-normal">
+                          ＋ タイトルを付ける
+                        </span>
+                      )}
+                    </button>
                     <div className="text-[10px] text-zinc-500 truncate">
                       {bg.width}×{bg.height} · {bg.quality}
                     </div>
@@ -423,6 +440,13 @@ export default function CreatorBackgroundsPage() {
                       >
                         DL
                       </a>
+                      <button
+                        onClick={() => renameTitle(bg)}
+                        className="text-[10px] bg-zinc-100 hover:bg-zinc-200 rounded px-2 py-1 font-semibold text-zinc-700"
+                        title="タイトルを編集"
+                      >
+                        ✏
+                      </button>
                       <button
                         onClick={() => remove(bg)}
                         className="text-[10px] bg-red-50 hover:bg-red-100 rounded px-2 py-1 font-semibold text-red-600"
