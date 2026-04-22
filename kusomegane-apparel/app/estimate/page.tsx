@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Product } from "@/types"
-import { storage } from "@/lib/storage"
+import { storage, hydrateStorage } from "@/lib/storage"
 import { ensureImages } from "@/lib/migrateProduct"
 import { QuickEstimateCard } from "@/components/QuickEstimateCard"
 
@@ -11,9 +11,11 @@ export default function EstimatePage() {
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProducts(storage.getProducts().map(ensureImages))
-    setHydrated(true)
+    ;(async () => {
+      await hydrateStorage()
+      setProducts(storage.getProducts().map(ensureImages))
+      setHydrated(true)
+    })()
   }, [])
 
   function handleRegistered(updated: Product) {

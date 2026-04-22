@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { useRouter } from "next/navigation"
 import { Product } from "@/types"
 import { StatusBadge } from "./StatusBadge"
@@ -11,7 +12,7 @@ import { computeSampleCountdown } from "@/lib/sampleCountdown"
 
 export const PRODUCT_DRAG_TYPE = "application/x-kusomegane-product-id"
 
-export function ProductCard({ product }: { product: Product }) {
+function ProductCardImpl({ product }: { product: Product }) {
   const router = useRouter()
   const status = getProductStatus(product)
   const { done, total } = getProgress(product)
@@ -157,3 +158,11 @@ export function ProductCard({ product }: { product: Product }) {
     </div>
   )
 }
+
+// updatedAt が変わらなければ再描画しない（リスト全体の再レンダ抑制）
+export const ProductCard = memo(ProductCardImpl, (prev, next) => {
+  return (
+    prev.product.id === next.product.id &&
+    prev.product.updatedAt === next.product.updatedAt
+  )
+})

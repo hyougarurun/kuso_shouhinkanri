@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Product } from "@/types"
-import { storage } from "@/lib/storage"
+import { storage, hydrateStorage } from "@/lib/storage"
 import { seedIfEmpty } from "@/lib/seed"
 import {
   filterProducts,
@@ -30,9 +30,12 @@ export default function Home() {
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
-    seedIfEmpty()
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProducts(storage.getProducts().map(ensureImages))
+    ;(async () => {
+      await hydrateStorage()
+      seedIfEmpty()
+      setProducts(storage.getProducts().map(ensureImages))
+      setHydrated(true)
+    })()
     const locked = localStorage.getItem(LS_LOCK) === "1"
     setFilterLocked(locked)
     if (locked) {
@@ -41,7 +44,6 @@ export default function Home() {
       if (f === "all" || f === "in_progress" || f === "done") setFilter(f)
       if (m) setMonthFilter(m)
     }
-    setHydrated(true)
   }, [])
 
   // 固定 ON の間は値変更を永続化

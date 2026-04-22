@@ -11,6 +11,7 @@ function breadcrumb(pathname: string): string {
   if (pathname.startsWith("/estimate")) return "加工費推定ツール"
   if (pathname.startsWith("/base-models")) return "モデル画像"
   if (pathname.startsWith("/animator")) return "アニメーター"
+  if (pathname.startsWith("/creator/backgrounds")) return "背景生成アシスタント"
   return pathname
 }
 

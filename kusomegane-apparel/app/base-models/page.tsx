@@ -7,12 +7,27 @@ import type {
   BaseModelGender,
   BaseModelPose,
 } from "@/types"
-import { BaseModelUploadDialog } from "@/components/base-models/BaseModelUploadDialog"
-import { GenerateVariationDialog } from "@/components/base-models/GenerateVariationDialog"
+import dynamic from "next/dynamic"
 import {
   getCachedSignedUrl,
   ingestSignedUrls,
 } from "@/lib/signedUrlCache"
+
+// ダイアログは開いた時だけロード
+const BaseModelUploadDialog = dynamic(
+  () =>
+    import("@/components/base-models/BaseModelUploadDialog").then(
+      (m) => m.BaseModelUploadDialog,
+    ),
+  { ssr: false },
+)
+const GenerateVariationDialog = dynamic(
+  () =>
+    import("@/components/base-models/GenerateVariationDialog").then(
+      (m) => m.GenerateVariationDialog,
+    ),
+  { ssr: false },
+)
 
 interface BaseModelWithUrl extends BaseModel {
   signedUrl: string

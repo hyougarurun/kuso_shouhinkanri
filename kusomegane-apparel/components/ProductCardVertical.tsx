@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { useRouter } from "next/navigation"
 import { Product } from "@/types"
 import { StatusBadge } from "./StatusBadge"
@@ -16,12 +17,11 @@ import { getColorStyle } from "@/lib/colorPalette"
  * - 横並び・横スクロール前提のスケジュールショーケース等で使用
  * - ホーム画面の横長カードとは使い分ける
  */
-export function ProductCardVertical({
+function ProductCardVerticalImpl({
   product,
   widthClass = "w-48",
 }: {
   product: Product
-  /** カード幅の Tailwind クラス（例: w-44, w-48, w-52）。既定 w-48 (192px) */
   widthClass?: string
 }) {
   const router = useRouter()
@@ -109,3 +109,11 @@ export function ProductCardVertical({
     </button>
   )
 }
+
+export const ProductCardVertical = memo(
+  ProductCardVerticalImpl,
+  (prev, next) =>
+    prev.product.id === next.product.id &&
+    prev.product.updatedAt === next.product.updatedAt &&
+    prev.widthClass === next.widthClass,
+)

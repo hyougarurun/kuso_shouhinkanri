@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Product } from "@/types"
-import { storage } from "@/lib/storage"
+import { storage, hydrateStorage } from "@/lib/storage"
 import { ensureImages } from "@/lib/migrateProduct"
 import { generateMonthLabels } from "@/lib/schedule"
 import { ScheduleBoard } from "@/components/schedule/ScheduleBoard"
@@ -15,12 +15,13 @@ export default function SchedulePage() {
   const showcaseRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProducts(storage.getProducts().map(ensureImages))
-    const firstMonth = generateMonthLabels()[0]?.value ?? ""
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setShowcaseMonth(firstMonth)
-    setHydrated(true)
+    ;(async () => {
+      await hydrateStorage()
+      setProducts(storage.getProducts().map(ensureImages))
+      const firstMonth = generateMonthLabels()[0]?.value ?? ""
+      setShowcaseMonth(firstMonth)
+      setHydrated(true)
+    })()
   }, [])
 
   function handleSelectShowcase(next: string) {

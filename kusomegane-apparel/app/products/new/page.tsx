@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { v4 as uuid } from "uuid"
@@ -13,7 +13,7 @@ import {
   validateBasic,
   wizardToProducts,
 } from "@/lib/wizardState"
-import { storage } from "@/lib/storage"
+import { storage, hydrateStorage } from "@/lib/storage"
 import { getNextBaseNumber, assignProductNumbers } from "@/lib/productNumber"
 
 const STEP_LABELS = ["画像アップロード", "登録情報", "登録完了"]
@@ -23,6 +23,10 @@ export default function NewProductPage() {
   const [state, setState] = useState<WizardState>(initialWizardState)
   const [errors, setErrors] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    void hydrateStorage()
+  }, [])
 
   function goTo(step: 1 | 2 | 3) {
     setState((s) => ({ ...s, step }))

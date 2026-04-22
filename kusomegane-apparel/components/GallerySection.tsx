@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import dynamic from "next/dynamic"
 import { Product, GalleryImage } from "@/types"
 import {
   deleteGalleryItemRemote,
@@ -8,7 +9,12 @@ import {
   reorderGalleryRemote,
   uploadGalleryFile,
 } from "@/lib/galleryClient"
-import { GalleryLightbox } from "./GalleryLightbox"
+
+// 拡大表示時のみロード（初期バンドル削減）
+const GalleryLightbox = dynamic(
+  () => import("./GalleryLightbox").then((m) => m.GalleryLightbox),
+  { ssr: false },
+)
 
 type Props = {
   product: Product

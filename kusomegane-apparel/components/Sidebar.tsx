@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/estimate", label: "加工費推定", match: (p: string) => p.startsWith("/estimate") },
   { href: "/base-models", label: "モデル画像", match: (p: string) => p.startsWith("/base-models") },
   { href: "/animator", label: "アニメーター", match: (p: string) => p.startsWith("/animator") },
+  { href: "/creator/backgrounds", label: "背景生成", match: (p: string) => p.startsWith("/creator/backgrounds") },
 ]
 
 export function Sidebar() {

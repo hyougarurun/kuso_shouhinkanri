@@ -128,6 +128,26 @@ export type ProductDriveFileRow = {
   uploaded_at: string
 }
 
+export type CreatorBackgroundRow = {
+  id: string
+  storage_path: string
+  bucket: string
+  mime_type: string
+  size_bytes: number | null
+  width: number | null
+  height: number | null
+  source_storage_path: string | null
+  source_mime_type: string | null
+  prompt: string
+  model: string
+  quality: string
+  title: string
+  is_favorite: boolean
+  notes: string
+  created_at: string
+  updated_at: string
+}
+
 export type BaseModelRow = {
   id: string
   gender: BaseModelGenderDB
@@ -200,6 +220,16 @@ export type Database = {
           uploaded_at?: string
         }
         Update: Partial<ProductDriveFileRow>
+        Relationships: []
+      }
+      creator_backgrounds: {
+        Row: CreatorBackgroundRow
+        Insert: Omit<CreatorBackgroundRow, "id" | "created_at" | "updated_at"> & {
+          id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<CreatorBackgroundRow>
         Relationships: []
       }
       base_models: {

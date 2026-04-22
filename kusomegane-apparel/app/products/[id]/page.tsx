@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { Product, FlowStep, AssetStatus } from "@/types"
-import { storage } from "@/lib/storage"
+import { storage, hydrateStorage } from "@/lib/storage"
 import { getProductStatus } from "@/lib/productStatus"
 import { computeSampleCountdown } from "@/lib/sampleCountdown"
 import { duplicateProduct } from "@/lib/productDuplicate"
@@ -39,11 +39,14 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (!id) return
-    const found = storage.getProducts().find((p) => p.id === id) ?? null
-    const initial = found ? ensureImages(found) : null
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProduct(initial)
-    setLoaded(true)
+    let cancelled = false
+    ;(async () => {
+      await hydrateStorage()
+      if (cancelled) return
+      const found = storage.getProducts().find((p) => p.id === id) ?? null
+      const initial = found ? ensureImages(found) : null
+      setProduct(initial)
+      setLoaded(true)
 
     // レガシー gallery（dataUrl のみ、storagePath 無し）を Supabase Storage に自動移行。
     // 失敗した項目は元のまま残すので壊れない。
@@ -79,6 +82,10 @@ export default function ProductDetailPage() {
           }
         })()
       }
+      }
+    })()
+    return () => {
+      cancelled = true
     }
   }, [id])
 
