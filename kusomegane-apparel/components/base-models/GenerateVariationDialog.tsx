@@ -19,8 +19,26 @@ const MODES: { value: VariationMode; label: string; hint: string }[] = [
 ]
 
 const MODEL_OPTIONS = [
-  { value: "gemini-2.5-flash-image", label: "Gemini 2.5 Flash Image (~$0.039/枚)" },
-  { value: "gemini-2.5-flash-image-preview", label: "Gemini 2.5 Flash Image Preview" },
+  {
+    value: "gemini-2.5-flash-image",
+    label: "Gemini 2.5 Flash Image（~$0.039 / 約 6 円）",
+    warn: null as string | null,
+  },
+  {
+    value: "gpt-image-2/low",
+    label: "GPT-image-2 Low（~$0.006 / 約 1 円・最安）",
+    warn: null,
+  },
+  {
+    value: "gpt-image-2/medium",
+    label: "GPT-image-2 Medium（~$0.041 / 約 6 円・推奨）",
+    warn: null,
+  },
+  {
+    value: "gpt-image-2/high",
+    label: "GPT-image-2 High（~$0.165 / 約 25 円・高画質）",
+    warn: "⚠ 1 枚約 25 円（Medium の 4 倍）。厳選用途で使用",
+  },
 ]
 
 type Props = {
@@ -200,6 +218,12 @@ export function GenerateVariationDialog({
                 </option>
               ))}
             </select>
+            {(() => {
+              const warn = MODEL_OPTIONS.find((m) => m.value === model)?.warn
+              return warn ? (
+                <p className="text-[10px] text-red-700 mt-1">{warn}</p>
+              ) : null
+            })()}
           </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded p-2 text-[11px] text-amber-800">
