@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { buildPrompt, type Tone } from "@/lib/postCaption/buildPrompt"
+import { buildPrompt } from "@/lib/postCaption/buildPrompt"
+import { getCharacter } from "@/lib/postCaption/characters"
 import { parseSituation } from "@/lib/postCaption/parseSituation"
 import {
   generateWithClaude,
@@ -25,28 +26,32 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const presetBody = String(form.get("presetBody") ?? "").trim()
+  const characterId = String(form.get("characterId") ?? "").trim()
   const situationRaw = String(form.get("situation") ?? "")
-  const targetLengthStr = String(form.get("targetLength") ?? "500")
-  const tone = String(form.get("tone") ?? "tame") as Tone
+  const targetLengthRaw = form.get("targetLength")
   const model = String(
     form.get("model") ?? "claude-haiku-4-5-20251001"
   ) as ModelId
   const countStr = String(form.get("count") ?? "1")
 
-  if (!presetBody) {
+  const character = getCharacter(characterId)
+  if (!character) {
     return NextResponse.json(
-      { error: "プリセット本文（指示文）が空です" },
+      { error: `キャラ id "${characterId}" が不正です` },
       { status: 400 }
     )
   }
 
-  const targetLength = Number.parseInt(targetLengthStr, 10)
-  if (!Number.isFinite(targetLength) || targetLength <= 0) {
-    return NextResponse.json(
-      { error: "targetLength が不正です" },
-      { status: 400 }
-    )
+  let targetLength: number | undefined
+  if (targetLengthRaw !== null && String(targetLengthRaw) !== "") {
+    const n = Number.parseInt(String(targetLengthRaw), 10)
+    if (!Number.isFinite(n) || n <= 0) {
+      return NextResponse.json(
+        { error: "targetLength が不正です" },
+        { status: 400 }
+      )
+    }
+    targetLength = n
   }
 
   const count = Math.min(Math.max(Number.parseInt(countStr, 10) || 1, 1), 5)
@@ -68,10 +73,9 @@ export async function POST(req: NextRequest) {
   }
 
   const prompt = buildPrompt({
-    presetBody,
+    characterId,
     situation: parseSituation(situationRaw),
     targetLength,
-    tone,
   })
 
   if (!model.startsWith("claude-")) {

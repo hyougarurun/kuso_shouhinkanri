@@ -1,52 +1,150 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { loadPresets, type Preset } from "@/lib/postCaption/presets"
+import {
+  CHARACTERS,
+  getCharacter,
+  type CharacterId,
+} from "@/lib/postCaption/characters"
+import {
+  getCounter,
+  setCounter,
+  bumpCounter,
+  type CounterKind,
+} from "@/lib/postCaption/counters"
+import { composeCaption } from "@/lib/postCaption/composeCaption"
+import { resizeImage } from "@/lib/imageResize"
 import {
   MODEL_OPTIONS,
   DEFAULT_MODEL_ID,
   LENGTH_PRESETS,
   LENGTH_MIN,
   LENGTH_MAX,
-  DEFAULT_LENGTH,
-  TONE_OPTIONS,
-  DEFAULT_TONE,
   type ModelId,
 } from "@/lib/postCaption/constants"
-import type { Tone } from "@/lib/postCaption/buildPrompt"
 import { CaptionResultCard } from "@/components/post-caption/CaptionResultCard"
+
+const CLAUDE_MAX_BYTES = 3_500_000
+
+async function shrinkForClaude(file: File): Promise<Blob> {
+  const attempts: Array<{ maxSize: number; quality: number }> = [
+    { maxSize: 1600, quality: 0.85 },
+    { maxSize: 1280, quality: 0.8 },
+    { maxSize: 1024, quality: 0.75 },
+    { maxSize: 800, quality: 0.7 },
+    { maxSize: 640, quality: 0.65 },
+  ]
+  let lastBlob: Blob | null = null
+  for (const opt of attempts) {
+    const resized = await resizeImage(file, { ...opt, forceJpeg: true })
+    const blob = await (await fetch(resized.dataUrl)).blob()
+    lastBlob = blob
+    if (blob.size <= CLAUDE_MAX_BYTES) return blob
+  }
+  return lastBlob!
+}
+
+function CounterField({
+  label,
+  kind,
+  value,
+  onChange,
+}: {
+  label: string
+  kind: CounterKind
+  value: number | null
+  onChange: (n: number | null) => void
+}) {
+  const [draft, setDraft] = useState<string>("")
+
+  function commit() {
+    const n = Number.parseInt(draft, 10)
+    if (!Number.isFinite(n) || n < 0) {
+      alert(`${label} は 0 以上の整数で入力してください`)
+      return
+    }
+    try {
+      setCounter(kind, n)
+      onChange(n)
+      setDraft("")
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  function bump() {
+    try {
+      const next = bumpCounter(kind)
+      onChange(next)
+    } catch {
+      alert(`${label} は未設定です。まず初期値を入力してから「確定」してください。`)
+    }
+  }
+
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-zinc-700 mb-1">
+        {label}（現在: {value == null ? "未設定" : value}）
+      </label>
+      <div className="flex gap-1">
+        <input
+          type="number"
+          min={0}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={value == null ? "例: 143" : `上書きする値`}
+          className="flex-1 text-sm border border-zinc-300 rounded px-2 py-1 bg-white"
+        />
+        <button
+          onClick={commit}
+          className="text-[11px] bg-white border border-zinc-300 hover:bg-zinc-50 rounded px-2 py-1 font-semibold"
+        >
+          確定
+        </button>
+        <button
+          onClick={bump}
+          className="text-[11px] bg-white border border-zinc-300 hover:bg-zinc-50 rounded px-2 py-1 font-semibold"
+          title="+1 自動採番"
+        >
+          +1
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function CaptionsPage() {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string>("")
   const [dragOver, setDragOver] = useState(false)
 
-  const [presets, setPresets] = useState<Preset[]>([])
-  const [selectedPresetId, setSelectedPresetId] = useState<string>("")
-  const [presetBody, setPresetBody] = useState("")
+  const [characterId, setCharacterId] = useState<CharacterId>(
+    CHARACTERS[0].id
+  )
+  const [title, setTitle] = useState("")
+  const [episode, setEpisode] = useState<number | null>(null)
+  const [postNo, setPostNo] = useState<number | null>(null)
 
   const [situation, setSituation] = useState("")
   const [model, setModel] = useState<ModelId>(DEFAULT_MODEL_ID)
-  const [targetLength, setTargetLength] = useState<number>(DEFAULT_LENGTH)
-  const [tone, setTone] = useState<Tone>(DEFAULT_TONE)
+
+  const [targetLength, setTargetLength] = useState<number>(
+    CHARACTERS[0].defaultLength
+  )
 
   const [generating, setGenerating] = useState(false)
   const [results, setResults] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const list = loadPresets()
-    setPresets(list)
-    if (list.length > 0) {
-      setSelectedPresetId(list[0].id)
-      setPresetBody(list[0].body)
-    }
+    setEpisode(getCounter("episode"))
+    setPostNo(getCounter("postNo"))
   }, [])
 
   useEffect(() => {
-    const found = presets.find((p) => p.id === selectedPresetId)
-    if (found) setPresetBody(found.body)
-  }, [selectedPresetId, presets])
+    const c = getCharacter(characterId)
+    if (c) setTargetLength(c.defaultLength)
+  }, [characterId])
 
   useEffect(() => {
     const url = file ? URL.createObjectURL(file) : ""
@@ -75,21 +173,31 @@ export default function CaptionsPage() {
   }, [])
 
   async function generate() {
-    if (!presetBody.trim()) {
-      setError("指示文（プリセット本文）が空です")
+    if (!title.trim()) {
+      setError("タイトルを入力してください")
+      return
+    }
+    if (episode == null) {
+      setError("話数を設定してください（手動入力 → 確定）")
+      return
+    }
+    if (postNo == null) {
+      setError("Post No. を設定してください（手動入力 → 確定）")
       return
     }
     setGenerating(true)
     setError(null)
     try {
       const form = new FormData()
-      form.append("presetBody", presetBody)
+      form.append("characterId", characterId)
       form.append("situation", situation)
       form.append("targetLength", String(targetLength))
-      form.append("tone", tone)
       form.append("model", model)
       form.append("count", "1")
-      if (file) form.append("file", file)
+      if (file) {
+        const blob = await shrinkForClaude(file)
+        form.append("file", new File([blob], "caption-source.jpg", { type: "image/jpeg" }))
+      }
 
       const res = await fetch("/api/post-captions/generate", {
         method: "POST",
@@ -99,7 +207,17 @@ export default function CaptionsPage() {
       if (!res.ok || j.error) {
         throw new Error(j.error || `生成失敗 (HTTP ${res.status})`)
       }
-      setResults(j.captions as string[])
+      const bodies = j.captions as string[]
+      const composed = bodies.map((body) =>
+        composeCaption({
+          title: title.trim(),
+          episode,
+          characterId,
+          body,
+          postNo,
+        })
+      )
+      setResults(composed)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -116,12 +234,14 @@ export default function CaptionsPage() {
     if (f) setFile(f)
   }
 
+  const currentCharacter = getCharacter(characterId)
+
   return (
     <div className="space-y-4">
       <header>
         <h1 className="text-lg font-bold">投稿キャプション生成</h1>
         <p className="text-[11px] text-zinc-500 mt-0.5">
-          作画 + 状況メモ → AI で日記風キャプションを生成 · Phase C2（1件生成・Claude のみ）
+          キャラ雛形 + 作画 + 状況メモ → AI で本文生成 → タイトル/Post No./タグをコード組み立て · Phase C2.1
         </p>
       </header>
 
@@ -190,32 +310,51 @@ export default function CaptionsPage() {
 
           <div>
             <label className="block text-xs font-semibold text-zinc-700 mb-1">
-              プリセット
+              キャラ
             </label>
             <select
-              value={selectedPresetId}
-              onChange={(e) => setSelectedPresetId(e.target.value)}
+              value={characterId}
+              onChange={(e) => setCharacterId(e.target.value as CharacterId)}
               className="w-full text-sm border border-zinc-300 rounded px-2 py-1 bg-white"
             >
-              {presets.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
+              {CHARACTERS.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}（{c.titleLabel}）
                 </option>
               ))}
             </select>
+            {currentCharacter && (
+              <p className="text-[10px] text-zinc-500 mt-1 whitespace-pre-wrap">
+                {currentCharacter.promptBody}
+              </p>
+            )}
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-zinc-700 mb-1">
-              指示文（編集可）
+              タイトル（手動入力）
             </label>
-            <textarea
-              value={presetBody}
-              onChange={(e) => setPresetBody(e.target.value)}
-              rows={3}
-              className="w-full text-sm border border-zinc-300 rounded px-2 py-1 resize-y"
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="例: ダメージジーンズ病院で回復させメガネ"
+              className="w-full text-sm border border-zinc-300 rounded px-2 py-1 bg-white"
             />
           </div>
+
+          <CounterField
+            label="話数"
+            kind="episode"
+            value={episode}
+            onChange={setEpisode}
+          />
+          <CounterField
+            label="Post No."
+            kind="postNo"
+            value={postNo}
+            onChange={setPostNo}
+          />
 
           <div>
             <label className="block text-xs font-semibold text-zinc-700 mb-1">
@@ -276,31 +415,11 @@ export default function CaptionsPage() {
               type="range"
               min={LENGTH_MIN}
               max={LENGTH_MAX}
-              step={50}
+              step={10}
               value={targetLength}
               onChange={(e) => setTargetLength(Number(e.target.value))}
               className="w-full"
             />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-zinc-700 mb-1">
-              文体
-            </label>
-            <div className="flex gap-3 text-xs">
-              {TONE_OPTIONS.map((t) => (
-                <label key={t.value} className="inline-flex items-center gap-1">
-                  <input
-                    type="radio"
-                    name="tone"
-                    value={t.value}
-                    checked={tone === t.value}
-                    onChange={() => setTone(t.value as Tone)}
-                  />
-                  {t.label}
-                </label>
-              ))}
-            </div>
           </div>
 
           {error && (
@@ -311,7 +430,7 @@ export default function CaptionsPage() {
 
           <button
             onClick={generate}
-            disabled={generating || !presetBody.trim()}
+            disabled={generating || !title.trim() || episode == null || postNo == null}
             className="w-full rounded-md bg-brand-yellow text-black text-sm font-bold py-2.5 hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             {generating ? "生成中…" : "✍️ 1件生成"}

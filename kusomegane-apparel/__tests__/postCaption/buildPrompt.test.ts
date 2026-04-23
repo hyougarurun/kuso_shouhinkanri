@@ -2,69 +2,70 @@ import { describe, it, expect } from "vitest"
 import { buildPrompt } from "@/lib/postCaption/buildPrompt"
 
 describe("buildPrompt", () => {
-  it("TC-PP-001: 基本構造 — 指示 + 状況 + 文体 + 文字数", () => {
+  it("TC-PP-001: 基本構造 — promptBody + 状況メモ + 文字数 + 「本文のみ」指示", () => {
     const result = buildPrompt({
-      presetBody: "日記風に仕上げて",
+      characterId: "char-harimeganezumi",
       situation: ["朝寝坊", "雨"],
-      targetLength: 500,
-      tone: "tame",
+      targetLength: 450,
     })
-    expect(result).toContain("日記風に仕上げて")
+    expect(result).toMatch(/おもしろおかしく日記風に説明/)
+    expect(result).toContain("## 状況メモ")
     expect(result).toContain("- 朝寝坊")
     expect(result).toContain("- 雨")
-    expect(result).toContain("500")
-    expect(result).toContain("タメ口")
+    expect(result).toContain("450")
+    expect(result).toContain("本文のみ")
   })
 
-  it("TC-PP-002: 状況が空配列なら画像から推測する指示が入る", () => {
+  it("TC-PP-002: 状況メモが空配列なら「画像から読み取って」指示が入る", () => {
     const result = buildPrompt({
-      presetBody: "日記風に仕上げて",
+      characterId: "char-harimeganezumi",
       situation: [],
-      targetLength: 500,
-      tone: "tame",
+      targetLength: 450,
     })
+    expect(result).not.toContain("## 状況メモ")
     expect(result).toMatch(/画像|イラスト/)
-    expect(result).not.toContain("## 状況")
   })
 
-  it("TC-PP-003: 文体 desu → です・ます調", () => {
-    const result = buildPrompt({
-      presetBody: "日記風に仕上げて",
-      situation: ["朝寝坊"],
-      targetLength: 500,
-      tone: "desu",
+  it("TC-PP-003: キャラごとに異なる promptBody が反映される", () => {
+    const mom = buildPrompt({
+      characterId: "char-kuso-mom",
+      situation: [],
+      targetLength: 450,
     })
-    expect(result).toContain("です・ます")
-    expect(result).not.toContain("タメ口")
+    expect(mom).toContain("スピリチュアル")
+    expect(mom).toContain("お母さん")
+
+    const imouto = buildPrompt({
+      characterId: "char-imouto",
+      situation: [],
+      targetLength: 450,
+    })
+    expect(imouto).toContain("ひらがな")
+
+    const ani = buildPrompt({
+      characterId: "char-ani",
+      situation: [],
+      targetLength: 120,
+    })
+    expect(ani).toContain("ヤンキー")
+    expect(ani).toContain("卍")
   })
 
-  it("TC-PP-004: 文体 dearu → だ・である調", () => {
+  it("TC-PP-004: targetLength を省略するとキャラの defaultLength が使われる", () => {
     const result = buildPrompt({
-      presetBody: "日記風に仕上げて",
-      situation: ["朝寝坊"],
-      targetLength: 500,
-      tone: "dearu",
+      characterId: "char-ani",
+      situation: [],
     })
-    expect(result).toContain("だ・である")
+    expect(result).toContain("120")
   })
 
-  it("TC-PP-005: targetLength が反映される", () => {
-    const result = buildPrompt({
-      presetBody: "日記風に仕上げて",
-      situation: ["朝寝坊"],
-      targetLength: 800,
-      tone: "tame",
-    })
-    expect(result).toContain("800")
-  })
-
-  it("TC-PP-006: 不正トーン → タメ口フォールバック（クラッシュしない）", () => {
-    const result = buildPrompt({
-      presetBody: "日記風に仕上げて",
-      situation: ["朝寝坊"],
-      targetLength: 500,
-      tone: "invalid" as unknown as "tame",
-    })
-    expect(result).toContain("タメ口")
+  it("TC-PP-005: 不正 characterId は例外", () => {
+    expect(() =>
+      buildPrompt({
+        characterId: "char-unknown",
+        situation: [],
+        targetLength: 400,
+      })
+    ).toThrow(/unknown character/i)
   })
 })

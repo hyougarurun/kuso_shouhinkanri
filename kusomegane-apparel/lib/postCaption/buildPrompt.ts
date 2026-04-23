@@ -1,35 +1,38 @@
-export type Tone = "tame" | "desu" | "dearu"
+import { getCharacter } from "@/lib/postCaption/characters"
 
 export interface BuildPromptInput {
-  presetBody: string
+  characterId: string
   situation: string[]
-  targetLength: number
-  tone: Tone
-}
-
-const TONE_LABEL: Record<Tone, string> = {
-  tame: "タメ口（フレンドリーに語りかける感じ）",
-  desu: "です・ます調",
-  dearu: "だ・である調",
+  targetLength?: number
 }
 
 export function buildPrompt(input: BuildPromptInput): string {
-  const toneLabel = TONE_LABEL[input.tone] ?? TONE_LABEL.tame
+  const character = getCharacter(input.characterId)
+  if (!character) {
+    throw new Error(`unknown character: ${input.characterId}`)
+  }
+  const length = input.targetLength ?? character.defaultLength
+
   const lines: string[] = []
-  lines.push(input.presetBody)
+  lines.push(character.promptBody)
   lines.push("")
+
   if (input.situation.length > 0) {
-    lines.push("## 状況")
+    lines.push("## 状況メモ")
     for (const s of input.situation) {
       lines.push(`- ${s}`)
     }
     lines.push("")
   } else {
-    lines.push("状況メモは提供されていません。画像（イラスト）から読み取れる情報だけで書いてください。")
+    lines.push(
+      "状況メモはありません。画像（イラスト）から読み取れる情報だけで書いてください。"
+    )
     lines.push("")
   }
-  lines.push(`## 条件`)
-  lines.push(`- 文字数: ${input.targetLength}字程度`)
-  lines.push(`- 文体: ${toneLabel}`)
+
+  lines.push("## 出力ルール")
+  lines.push("- 本文のみを返してください（タイトル・ハッシュタグ・Post No. は不要）")
+  lines.push(`- 文字数: ${length} 字程度`)
+
   return lines.join("\n")
 }

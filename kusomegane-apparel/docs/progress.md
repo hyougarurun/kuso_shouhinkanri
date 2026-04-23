@@ -1,19 +1,22 @@
 # 作業進捗
 
 ## 現在の作業
-- 機能: Phase Caption（投稿キャプション生成ツール）
-- 状態: 設計フェーズ完了 → テスト設計中
-- 次にやること: Phase C1（状況メモパース / プロンプト組み立て / プリセット I/O の TDD 実装）
+- 機能: Phase Caption v2（6キャラ雛形ベースへリライト）
+- 状態: Phase C2.1（lib / API / UI リライト）完了
+- 次にやること: /captions UI を実機で通し確認 → Phase C3（3件並列生成・各カード再生成）着手
 - ブロッカー: なし
-- 未解決の設計判断: なし（ツッコミ風プリセット・タグ自由入力は MVP 採用、微調整は後日）
+- 未解決の設計判断: 各キャラ titleLabel の最終確定文字列（k2 から全員分送付予定）
 
 ## テスト状況（サマリー）
 - A〜K（既存）: 合計 61 件 全 PASS
-- L. 投稿キャプション 状況メモパース: 5 件 ⬜ 未実装（Phase C1）
-- M. 投稿キャプション プロンプト組み立て: 6 件 ⬜ 未実装（Phase C1）
-- N. 投稿キャプション プリセット I/O: 5 件 ⬜ 未実装（Phase C1）
+- L. 投稿キャプション 状況メモパース: 5 件 ✅ PASS
+- M. 投稿キャプション キャラ + プロンプト組み立て: 8 件 ✅ PASS（Phase C2.1）
+- N. 投稿キャプション カウンター: 6 件 ✅ PASS（Phase C2.1）
+- O. 投稿キャプション 最終キャプション組み立て: 7 件 ✅ PASS（Phase C2.1）
+- vitest 実行上: 21 ファイル 119 件 all PASS
 
 ## 直近の完了タスク（新しい順）
+- 2026-04-23 Phase C2.1: Phase Caption v2（6キャラ雛形ベース + カウンター + composeCaption）
 - 2026-04-22 fix(ProductCard): gallery 追加サムネが 'thumb' 表示になる問題を修正 (3e0028f)
 - 2026-04-22 feat: 背景タイトル後編集 + Animator ライブラリ Supabase 化 (3d5696e)
 - 2026-04-22 fix(creator/bg): moderation_blocked 回避 + プロンプト完全上書きモード (fb9e292)
@@ -26,13 +29,13 @@
 - 2026-04-18 Phase 1.4a: base モデル画像基盤 (0c691f8)
 - 2026-04-16 Phase 0.1〜0.7: MVP（ホーム / ウィザード / 詳細 / ボディ型番マスタ / 画像スロット拡張 / ZIP エクスポート等）
 
-## Phase Caption 分割案
-- **C1**: 純ロジック（parseSituation / buildPrompt / presets）TDD 実装
-- **C2**: UI 骨組み + Claude で 1件生成
+## Phase Caption 分割案（v2）
+- ~~C1〜C2: プリセット機構・1件生成~~（破棄して v2 に置換）
+- **C2.1** ✅: lib リライト（characters / buildPrompt / counters / composeCaption）+ API/UI 更新
 - **C3**: 3件並列生成 + 再生成/コピー/編集ボタン
-- **C4**: モデル切替 + プリセット管理 UI + 文字数/文体切替
+- **C4**: キャラプロンプト編集 UI（微調整）+ 文字数プリセットのキャラ別 default
 - **C5**: Supabase ナレッジ保存 + 一覧/タグ検索
 - **C6**: OpenAI / Gemini プロバイダ追加
 
 ## 設計メモへのリンク
-- /docs/design-notes/phase-caption.md（Phase Caption 設計メモ）
+- /docs/design-notes/phase-caption-v2.md（現行・6キャラ雛形ベース）

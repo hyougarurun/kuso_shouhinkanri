@@ -47,15 +47,6 @@ export const MODEL_OPTIONS: ModelOption[] = [
 
 export const DEFAULT_MODEL_ID: ModelId = "claude-haiku-4-5-20251001"
 
-export const LENGTH_PRESETS = [200, 500, 800] as const
-export const LENGTH_MIN = 100
+export const LENGTH_PRESETS = [120, 300, 450, 600, 800] as const
+export const LENGTH_MIN = 80
 export const LENGTH_MAX = 1200
-export const DEFAULT_LENGTH = 500
-
-export const TONE_OPTIONS = [
-  { value: "tame", label: "タメ口" },
-  { value: "desu", label: "です・ます調" },
-  { value: "dearu", label: "だ・である調" },
-] as const
-
-export const DEFAULT_TONE = "tame"
