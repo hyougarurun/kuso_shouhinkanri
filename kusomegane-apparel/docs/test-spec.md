@@ -16,9 +16,10 @@
 | J. BaseModel serialize | 6 | 6 | 0 |
 | K. 入力履歴サジェスト | 10 | 10 | 0 |
 | L. 投稿キャプション 状況メモパース | 5 | 0 | 0 |
-| M. 投稿キャプション プロンプト組み立て | 6 | 0 | 0 |
-| N. 投稿キャプション プリセット I/O | 5 | 0 | 0 |
-| **合計** | **77** | **61** | **0** |
+| M. 投稿キャプション キャラ + プロンプト組み立て | 8 | 0 | 0 |
+| N. 投稿キャプション カウンター | 6 | 0 | 0 |
+| O. 投稿キャプション 最終キャプション組み立て | 7 | 0 | 0 |
+| **合計** | **87** | **61** | **0** |
 
 ## H. 画像マイグレーション（Phase 0.7）
 
@@ -174,80 +175,163 @@
 - **入力**: `""` / `"   "` / `"\n\n"`
 - **期待結果**: `[]`
 
-## M. 投稿キャプション プロンプト組み立て（Phase C1）
+## M. 投稿キャプション キャラ + プロンプト組み立て（Phase C2.1）
 
-対象モジュール: `lib/postCaption/buildPrompt.ts`
+対象モジュール: `lib/postCaption/characters.ts`, `lib/postCaption/buildPrompt.ts`
 
-プリセット本文 + 状況箇条書き + 文字数 + 文体 から、AI に投げるプロンプト文字列を構築する。
+KUSOMEGANE 6 キャラ（ハリメガネズミ / クソメガネ母 / クソメガネ父 / さくら / いもうと / 兄）の定数と、
+それを起点に AI プロンプトを構築するロジック。プリセット機構は廃止。
 
-### TC-PP-001: 基本構造 — 指示 + 状況 + 文体 + 文字数
+### TC-CH-001: CHARACTERS は 6 件で id がユニーク
+- **ファイル**: `__tests__/postCaption/characters.test.ts`
+- **優先度**: P0
+- **期待結果**: 配列長は 6、`id` の重複なし、各エントリに `{ id, name, titleLabel, promptBody, defaultLength }` が揃う
+
+### TC-CH-002: 期待されるキャラ id 6 種が全て存在
+- **ファイル**: `__tests__/postCaption/characters.test.ts`
+- **優先度**: P0
+- **期待結果**: id セットが `["char-harimeganezumi", "char-kuso-mom", "char-kuso-dad", "char-sakura", "char-imouto", "char-ani"]` と一致
+
+### TC-CH-003: getCharacter(id) で該当キャラを取得、不正 id は undefined
+- **ファイル**: `__tests__/postCaption/characters.test.ts`
+- **優先度**: P0
+- **期待結果**: `getCharacter("char-harimeganezumi")?.titleLabel === "【ハリメガネズミの日記】"`、`getCharacter("missing") === undefined`
+
+### TC-PP-001: buildPrompt 基本構造 — promptBody + 状況 + 文字数 + 「本文のみ」指示
 - **ファイル**: `__tests__/postCaption/buildPrompt.test.ts`
 - **優先度**: P0
-- **入力**: `{ presetBody: "日記風に仕上げて", situation: ["朝寝坊", "雨"], targetLength: 500, tone: "tame" }`
-- **期待結果**: 以下を全て含む
-  - `"日記風に仕上げて"`
-  - `"- 朝寝坊"`
-  - `"- 雨"`
-  - `"500"`（文字数）
-  - タメ口指示（例: "タメ口" を含む）
+- **入力**: `{ characterId: "char-harimeganezumi", situation: ["朝寝坊", "雨"], targetLength: 450 }`
+- **期待結果**: プロンプトに以下を全て含む
+  - キャラの `promptBody` の本文（例: 「おもしろおかしく日記風に説明」）
+  - `"## 状況メモ"` セクション
+  - `"- 朝寝坊"`、`"- 雨"`
+  - `"450"`（文字数）
+  - `"本文のみ"`（タイトル/タグ/Post No. を返さない指示）
 
-### TC-PP-002: 状況が空配列なら「画像から推測」指示を追加
+### TC-PP-002: 状況メモが空配列なら「画像から読み取って」指示が入る
 - **ファイル**: `__tests__/postCaption/buildPrompt.test.ts`
 - **優先度**: P0
-- **入力**: `{ presetBody: "...", situation: [], targetLength: 500, tone: "tame" }`
-- **期待結果**: 「画像」または「イラスト」を含む文言で推測を指示。箇条書きセクションは出ない。
+- **入力**: `{ characterId: "char-harimeganezumi", situation: [], targetLength: 450 }`
+- **期待結果**: `"## 状況メモ"` セクションは出ず、「画像」または「イラスト」を含む推測指示が入る
 
-### TC-PP-003: 文体 `desu` → です・ます調を指示
+### TC-PP-003: キャラごとに異なる promptBody が反映される
 - **ファイル**: `__tests__/postCaption/buildPrompt.test.ts`
 - **優先度**: P0
-- **期待結果**: プロンプトに「です・ます」を含む
+- **期待結果**: クソメガネ母 → 「スピリチュアル」「お母さん」を含む、いもうと → 「ひらがな」を含む、兄 → 「ヤンキー」「卍」を含む
 
-### TC-PP-004: 文体 `dearu` → だ・である調を指示
+### TC-PP-004: targetLength を省略するとキャラの defaultLength が使われる
 - **ファイル**: `__tests__/postCaption/buildPrompt.test.ts`
 - **優先度**: P0
-- **期待結果**: プロンプトに「だ・である」を含む
+- **入力**: `{ characterId: "char-ani", situation: [] }`（兄: defaultLength = 120）
+- **期待結果**: プロンプトに `"120"` を含む
 
-### TC-PP-005: targetLength が反映される
+### TC-PP-005: 不正 characterId → 例外を投げる
 - **ファイル**: `__tests__/postCaption/buildPrompt.test.ts`
 - **優先度**: P0
-- **入力**: `targetLength: 800`
-- **期待結果**: プロンプトに "800" を含む
+- **入力**: `{ characterId: "char-unknown", situation: [], targetLength: 400 }`
+- **期待結果**: 例外（メッセージに `"unknown character"` 等のヒント）
 
-### TC-PP-006: 不正トーン → タメ口フォールバック（クラッシュしない）
-- **ファイル**: `__tests__/postCaption/buildPrompt.test.ts`
+## N. 投稿キャプション カウンター（Phase C2.1）
+
+対象モジュール: `lib/postCaption/counters.ts`
+
+`localStorage` に「話数（episode）」「Post No.（postNo）」を **独立に** 永続化する。
+未設定なら手動入力、設定済みなら +1 自動採番。
+
+### TC-CT-001: 初期状態は null（未設定）
+- **ファイル**: `__tests__/postCaption/counters.test.ts`
+- **優先度**: P0
+- **期待結果**: `getCounter("episode") === null`、`getCounter("postNo") === null`
+
+### TC-CT-002: setCounter / getCounter ラウンドトリップ
+- **ファイル**: `__tests__/postCaption/counters.test.ts`
+- **優先度**: P0
+- **期待結果**: `setCounter("episode", 143)` 後 `getCounter("episode") === 143`
+
+### TC-CT-003: episode と postNo は独立保存
+- **ファイル**: `__tests__/postCaption/counters.test.ts`
+- **優先度**: P0
+- **期待結果**: 片方を set しても他方は null のまま、両方 set 後はそれぞれ独立した値が返る
+
+### TC-CT-004: bumpCounter で +1 して新値を返す（永続化される）
+- **ファイル**: `__tests__/postCaption/counters.test.ts`
+- **優先度**: P0
+- **期待結果**: `setCounter("episode", 143)` → `bumpCounter("episode") === 144` → `getCounter("episode") === 144`
+
+### TC-CT-005: 未設定の bumpCounter は例外
+- **ファイル**: `__tests__/postCaption/counters.test.ts`
+- **優先度**: P0
+- **期待結果**: `bumpCounter("episode")` は `null` のとき例外を投げる（メッセージに「未設定」相当のヒント）
+
+### TC-CT-006: 不正値（負・小数・NaN・Infinity）の setCounter は例外
+- **ファイル**: `__tests__/postCaption/counters.test.ts`
 - **優先度**: P1
-- **入力**: `tone: "invalid" as any`
-- **期待結果**: 例外を投げず、デフォルト（タメ口）相当の指示が入る
+- **期待結果**: `setCounter("episode", -1)` / `setCounter("episode", 1.5)` / `setCounter("episode", NaN)` 全て例外
 
-## N. 投稿キャプション プリセット I/O（Phase C1）
+## O. 投稿キャプション 最終キャプション組み立て（Phase C2.1）
 
-対象モジュール: `lib/postCaption/presets.ts`
+対象モジュール: `lib/postCaption/composeCaption.ts`
 
-LocalStorage にプリセット（雛形プロンプト）を保存・読込・編集・削除する。
+タイトル / 話数 / 【○○の日記】 / AI 生成本文 / Post No. / `.` / `#KUSOMEGANE` / `#ショートアニメ` を組み立てて完成キャプション文字列を返す。
 
-### TC-PR-001: 初回ロード時にデフォルト4プリセット（日記風/独り言風/ポエム風/ツッコミ風）
-- **ファイル**: `__tests__/postCaption/presets.test.ts`
+完成形フォーマット:
+```
+{title}#{episode}
+
+【{titleLabel}】
+{body}
+
+Post No.{postNo}
+.
+#KUSOMEGANE
+#ショートアニメ
+```
+
+### TC-CC-001: 完成形フォーマット全要素が含まれる（ハリメガネズミ / 実例）
+- **ファイル**: `__tests__/postCaption/composeCaption.test.ts`
 - **優先度**: P0
-- **前提**: LocalStorage 空
-- **期待結果**: 長さ4、各 preset に `{ id, name, body }`。`name` は `"日記風"`, `"独り言風"`, `"ポエム風"`, `"ツッコミ風"`
+- **入力**: `{ title: "ダメージジーンズ病院で回復させメガネ", episode: 143, characterId: "char-harimeganezumi", body: "今日は父の病院受付の手伝い。", postNo: 168 }`
+- **期待結果**: 戻り値が以下と完全一致
+  ```
+  ダメージジーンズ病院で回復させメガネ#143
 
-### TC-PR-002: savePresets で永続化、再 load で取れる
-- **ファイル**: `__tests__/postCaption/presets.test.ts`
+  【ハリメガネズミの日記】
+  今日は父の病院受付の手伝い。
+
+  Post No.168
+  .
+  #KUSOMEGANE
+  #ショートアニメ
+  ```
+
+### TC-CC-002: titleLabel はキャラから取得（クソメガネ母）
+- **ファイル**: `__tests__/postCaption/composeCaption.test.ts`
 - **優先度**: P0
-- **期待結果**: 保存 → load で同じ配列が返る
+- **期待結果**: `characterId: "char-kuso-mom"` のとき本文行直前に `"【クソメガネ母の日記】"` が入る
 
-### TC-PR-003: プリセット追加・削除
-- **ファイル**: `__tests__/postCaption/presets.test.ts`
+### TC-CC-003: 兄（titleLabel が「日記」でない）でも正しく組み立てる
+- **ファイル**: `__tests__/postCaption/composeCaption.test.ts`
 - **優先度**: P0
-- **期待結果**: `addPreset` で末尾追加、`removePreset(id)` で削除
+- **期待結果**: `characterId: "char-ani"` のとき `"【兄のデコログ】"` が入る
 
-### TC-PR-004: プリセット編集（body 変更）
-- **ファイル**: `__tests__/postCaption/presets.test.ts`
+### TC-CC-004: body の前後改行・空白は trim される（中の改行は保持）
+- **ファイル**: `__tests__/postCaption/composeCaption.test.ts`
 - **優先度**: P0
-- **期待結果**: `updatePreset(id, { body: "..." })` で該当プリセットだけ更新
+- **入力**: `body: "\n\n  本文一行目\n本文二行目  \n\n"`
+- **期待結果**: 出力中に `"本文一行目\n本文二行目"` が含まれ、その前後に余分な改行・空白が付かない
 
-### TC-PR-005: 不正 JSON → デフォルト4プリセットにフォールバック
-- **ファイル**: `__tests__/postCaption/presets.test.ts`
+### TC-CC-005: 末尾は固定で `Post No.{n}\n.\n#KUSOMEGANE\n#ショートアニメ`
+- **ファイル**: `__tests__/postCaption/composeCaption.test.ts`
+- **優先度**: P0
+- **期待結果**: 出力末尾が正規表現 `/Post No\.\d+\n\.\n#KUSOMEGANE\n#ショートアニメ$/` にマッチ
+
+### TC-CC-006: 不正 characterId は例外
+- **ファイル**: `__tests__/postCaption/composeCaption.test.ts`
+- **優先度**: P0
+- **期待結果**: `characterId: "char-unknown"` で例外
+
+### TC-CC-007: title が空文字でも例外を投げず、1 行目は `#{episode}` のみになる
+- **ファイル**: `__tests__/postCaption/composeCaption.test.ts`
 - **優先度**: P1
-- **前提**: LocalStorage に壊れた JSON
-- **期待結果**: デフォルト 4 プリセットが返る（クラッシュしない）
+- **入力**: `{ title: "", episode: 1, characterId: "char-harimeganezumi", body: "ほげ", postNo: 1 }`
+- **期待結果**: 1 行目が `"#1"`（先頭にゴミ文字なし）。UI 側で必須バリデーションを掛ける前提
