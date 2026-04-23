@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/base-models", label: "モデル画像", match: (p: string) => p.startsWith("/base-models") },
   { href: "/animator", label: "アニメーター", match: (p: string) => p.startsWith("/animator") },
   { href: "/creator/backgrounds", label: "背景生成", match: (p: string) => p.startsWith("/creator/backgrounds") },
+  { href: "/captions", label: "投稿キャプション", match: (p: string) => p.startsWith("/captions") },
 ]
 
 export function Sidebar() {
