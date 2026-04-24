@@ -25,9 +25,20 @@ export const COLOR_OPTIONS = [
   "ヘイジーブラック",
   "バニラホワイト",
   "ナチュラル",
+  "フリー",
 ] as const
 
-export const SIZE_OPTIONS = ["S", "M", "L", "XL", "XXL", "XXXL", "フリー", "90〜XXXL"] as const
+export const SIZE_OPTIONS = [
+  "S",
+  "M",
+  "L",
+  "XL",
+  "XXL",
+  "XXXL",
+  "フリー",
+  "90〜XXXL",
+  "その他",
+] as const
 
 export const PROCESSING_OPTIONS = [
   "刺繍",
