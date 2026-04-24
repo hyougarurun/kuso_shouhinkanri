@@ -6,7 +6,6 @@ import { Product } from "@/types"
 import { StatusBadge } from "./StatusBadge"
 import { SampleCountdownLabel } from "./SampleCountdown"
 import { getProductStatus, getProgress } from "@/lib/productStatus"
-import { getNextActionLabel } from "@/lib/nextAction"
 import { computeSampleCountdown } from "@/lib/sampleCountdown"
 
 export const PRODUCT_DRAG_TYPE = "application/x-kusomegane-product-id"
@@ -20,7 +19,6 @@ function ProductCardImpl({ product, onClearEstimation }: ProductCardProps) {
   const router = useRouter()
   const status = getProductStatus(product)
   const { done, total } = getProgress(product)
-  const nextLabel = getNextActionLabel(product)
   const countdown = computeSampleCountdown(product.sampleArrivalDate)
   const step5Done = product.steps.find((s) => s.stepNumber === 5)?.status === "done"
   const hasDrive = (product.driveFiles?.length ?? 0) > 0
@@ -123,9 +121,38 @@ function ProductCardImpl({ product, onClearEstimation }: ProductCardProps) {
           <div className="text-xs text-zinc-500 truncate mt-1">
             {[product.series, product.colors.join("・")].filter(Boolean).join(" · ")}
           </div>
-          <div className="text-xs text-zinc-700 truncate mt-0.5">
-            次: {nextLabel}
-          </div>
+          {product.estimation && (
+            <div className="mt-1 inline-flex items-center gap-2 rounded-md bg-amber-50 border border-amber-200 px-2 py-1 max-w-full">
+              <span className="text-[10px] font-bold text-amber-700 leading-none shrink-0">
+                推定加工費
+              </span>
+              <span className="text-xs font-bold text-amber-900 leading-none">
+                {product.estimation.totalMin !== undefined &&
+                product.estimation.totalMax !== undefined
+                  ? `¥${product.estimation.totalMin.toLocaleString()}〜${product.estimation.totalMax.toLocaleString()}`
+                  : `¥${product.estimation.subtotalProcessing.toLocaleString()}`}
+              </span>
+              {onClearEstimation && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (
+                      confirm(
+                        `「${product.name}」の推定加工費を取り消します。よろしいですか？`
+                      )
+                    ) {
+                      onClearEstimation(product.id)
+                    }
+                  }}
+                  title="推定加工費を取り消す"
+                  className="ml-1 w-4 h-4 rounded-full text-[10px] leading-none text-amber-700/70 hover:text-red-700 hover:bg-red-50 flex items-center justify-center shrink-0"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 追加画像サムネ 2〜6 枚目（1.5倍化: 40 → 60px） */}
@@ -153,40 +180,6 @@ function ProductCardImpl({ product, onClearEstimation }: ProductCardProps) {
           </div>
         )}
       </div>
-
-      {/* 中右: 推定加工費 */}
-      {product.estimation && (
-        <div className="hidden md:flex relative shrink-0 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 flex-col justify-center items-center min-w-[140px]">
-          {onClearEstimation && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                if (
-                  confirm(
-                    `「${product.name}」の推定加工費を取り消します。よろしいですか？`
-                  )
-                ) {
-                  onClearEstimation(product.id)
-                }
-              }}
-              title="推定加工費を取り消す"
-              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full text-[10px] leading-none text-amber-700/70 hover:text-red-700 hover:bg-red-50 flex items-center justify-center"
-            >
-              ×
-            </button>
-          )}
-          <div className="text-[11px] text-amber-700 leading-none">
-            推定加工費
-          </div>
-          <div className="text-sm font-bold text-amber-900 leading-tight mt-1 text-center">
-            {product.estimation.totalMin !== undefined &&
-            product.estimation.totalMax !== undefined
-              ? `¥${product.estimation.totalMin.toLocaleString()}〜${product.estimation.totalMax.toLocaleString()}`
-              : `¥${product.estimation.subtotalProcessing.toLocaleString()}`}
-          </div>
-        </div>
-      )}
 
       {/* 右: ステータス + 進捗カウント + カウントダウン */}
       <div className="shrink-0 flex flex-col justify-between items-end py-0.5 min-w-[150px]">
