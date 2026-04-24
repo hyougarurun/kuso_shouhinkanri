@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import type {
   EstimationResult,
@@ -8,6 +8,7 @@ import type {
   NormalizedLocation,
   NormalizedMethod,
 } from "@/lib/print-cost/types"
+import type { InvoiceCatalog } from "@/lib/print-cost/extractCatalog"
 import { mapMethodFromProcessingType } from "@/lib/print-cost/mapping"
 import { storage } from "@/lib/storage"
 import { Product } from "@/types"
@@ -78,6 +79,72 @@ export function QuickEstimateCard({ onRegistered, wide = false }: Props) {
   const [registeredMessage, setRegisteredMessage] = useState<string | null>(
     null,
   )
+
+  // 請求書アップロード + カタログ
+  const [catalog, setCatalog] = useState<InvoiceCatalog>({
+    bodyCodes: [],
+    colors: [],
+  })
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadResult, setUploadResult] = useState<{
+    sourceFile: string
+    lineItemCount: number
+  } | null>(null)
+
+  async function loadCatalog() {
+    try {
+      const res = await fetch("/api/print-cost/catalog")
+      const j = await res.json()
+      if (res.ok && j.catalog) {
+        setCatalog(j.catalog as InvoiceCatalog)
+        if (j.meta) {
+          setMeta((prev) => prev ?? {
+            invoices: j.meta.invoices,
+            lineItems: 0,
+            products: 0,
+            bodyCodes: (j.catalog as InvoiceCatalog).bodyCodes.length,
+          })
+        }
+      }
+    } catch {
+      // サイレント失敗（候補が出ないだけ）
+    }
+  }
+
+  useEffect(() => {
+    loadCatalog()
+  }, [])
+
+  async function uploadInvoice() {
+    if (!invoiceFile) return
+    setUploading(true)
+    setUploadError(null)
+    setUploadResult(null)
+    try {
+      const fd = new FormData()
+      fd.append("file", invoiceFile)
+      const res = await fetch("/api/print-cost/upload-invoice", {
+        method: "POST",
+        body: fd,
+      })
+      const j = await res.json()
+      if (!res.ok || j.error) {
+        throw new Error(j.error ?? `HTTP ${res.status}`)
+      }
+      setUploadResult({
+        sourceFile: j.invoice.sourceFile as string,
+        lineItemCount: j.lineItemCount as number,
+      })
+      setInvoiceFile(null)
+      await loadCatalog()
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setUploading(false)
+    }
+  }
 
   // ===== ハンドラ =====
   function onProductDragOver(e: React.DragEvent) {
@@ -260,6 +327,51 @@ export function QuickEstimateCard({ onRegistered, wide = false }: Props) {
             : "商品カードをドラッグ&ドロップ、画像アップロード、または手動入力で"}
         </p>
 
+        {/* 0. 請求書アップロード（学習データ追加） */}
+        <section>
+          <div className="text-[11px] font-bold text-zinc-700 mb-1.5">
+            ⓪ 請求書をアップロード（学習データ追加・任意）
+          </div>
+          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={(e) => {
+                  setInvoiceFile(e.target.files?.[0] ?? null)
+                  setUploadError(null)
+                  setUploadResult(null)
+                }}
+                disabled={uploading}
+                className="text-[11px] flex-1 min-w-0"
+              />
+              <button
+                type="button"
+                onClick={uploadInvoice}
+                disabled={!invoiceFile || uploading}
+                className="text-[11px] font-bold bg-brand-yellow text-black rounded px-3 py-1.5 hover:brightness-95 disabled:opacity-50 shrink-0"
+              >
+                {uploading ? "解析中…" : "解析する"}
+              </button>
+            </div>
+            {uploadError && (
+              <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded p-1.5 break-words">
+                {uploadError}
+              </div>
+            )}
+            {uploadResult && (
+              <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 rounded p-1.5">
+                ✓ {uploadResult.sourceFile} を解析しました
+                （明細 {uploadResult.lineItemCount} 件追加）
+              </div>
+            )}
+            <div className="text-[10px] text-zinc-500">
+              候補登録済み: {catalog.bodyCodes.length} ボディ型番 /{" "}
+              {catalog.colors.length} カラー
+            </div>
+          </div>
+        </section>
+
         {/* 1. 商品ドロップエリア */}
         <section>
           <div className="text-[11px] font-bold text-zinc-700 mb-1.5">
@@ -403,22 +515,37 @@ export function QuickEstimateCard({ onRegistered, wide = false }: Props) {
 
           <div className={wide ? "grid grid-cols-2 gap-3" : "space-y-3"}>
             <label className="block">
-              <span className="text-[11px] text-zinc-500">ボディ型番</span>
+              <span className="text-[11px] text-zinc-500">
+                ボディ型番{" "}
+                <span className="text-zinc-400">
+                  （請求書実績 {catalog.bodyCodes.length} 件から選択可）
+                </span>
+              </span>
               <SuggestiveInput
                 historyKey="estimate.bodyCode"
                 className="mt-1 w-full border border-zinc-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow"
                 value={bodyCode}
                 onChange={setBodyCode}
+                extraOptions={catalog.bodyCodes.map((b) => ({
+                  value: b.code,
+                  label: `${b.name}（${b.sampleCount} 件）`,
+                }))}
                 required
               />
             </label>
             <label className="block">
-              <span className="text-[11px] text-zinc-500">色</span>
+              <span className="text-[11px] text-zinc-500">
+                色{" "}
+                <span className="text-zinc-400">
+                  （請求書実績 {catalog.colors.length} 件から選択可）
+                </span>
+              </span>
               <SuggestiveInput
                 historyKey="estimate.color"
                 className="mt-1 w-full border border-zinc-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow"
                 value={color}
                 onChange={setColor}
+                extraOptions={catalog.colors.map((c) => ({ value: c }))}
               />
             </label>
           </div>

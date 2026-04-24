@@ -18,6 +18,11 @@ type Props = Omit<
   historyKey: string
   value: string
   onChange: (value: string) => void
+  /**
+   * 履歴に加えて datalist に出す追加候補。
+   * 例: 請求書から抽出した実績ボディ型番一覧。重複は自動で排除される。
+   */
+  extraOptions?: Array<{ value: string; label?: string }>
 }
 
 /**
@@ -31,6 +36,7 @@ export function SuggestiveInput({
   value,
   onChange,
   onBlur,
+  extraOptions,
   ...rest
 }: Props) {
   const [history, setHistory] = useState<string[]>([])
@@ -99,11 +105,18 @@ export function SuggestiveInput({
         )}
       </div>
 
-      {/* HTML5 datalist: タイプ中の自動補完 */}
+      {/* HTML5 datalist: タイプ中の自動補完（履歴 + 追加候補） */}
       <datalist id={datalistId}>
         {history.map((v) => (
-          <option key={v} value={v} />
+          <option key={`h-${v}`} value={v} />
         ))}
+        {(extraOptions ?? [])
+          .filter((opt) => !history.includes(opt.value))
+          .map((opt) => (
+            <option key={`e-${opt.value}`} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
       </datalist>
 
       {/* ▾ クリックで開くカスタム履歴ポップオーバー（個別削除可能） */}
