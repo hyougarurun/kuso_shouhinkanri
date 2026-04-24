@@ -20,7 +20,10 @@
 | N. 投稿キャプション カウンター | 6 | 0 | 0 |
 | O. 投稿キャプション 最終キャプション組み立て | 7 | 0 | 0 |
 | P. 文言アセット | 11 | 0 | 0 |
-| **合計** | **98** | **61** | **0** |
+| Q. 商品番号 競合検出 | 5 | 0 | 0 |
+| **合計** | **103** | **61** | **0** |
+
+注: B. 商品番号採番（既存 5 件）のうち TC-PN-003 / 004 は Phase E2 で「枝番採番廃止」仕様に書き換えるため、再 PASS が必要。
 
 ## H. 画像マイグレーション（Phase 0.7）
 
@@ -404,3 +407,50 @@ Post No.{postNo}
 - **ファイル**: `__tests__/captionAssets/parse.test.ts`
 - **優先度**: P1
 - **期待結果**: `category: ""`
+
+## Q. 商品番号 競合検出（Phase E1）
+
+対象モジュール: `lib/productNumber.ts`
+
+商品番号インライン編集時のリアルタイム競合チェック関数。
+
+### TC-PNC-001: 競合なし → null
+- **ファイル**: `__tests__/productNumber.test.ts`
+- **優先度**: P0
+- **入力**: products = `[{id:"a", productNumber:"58"}, {id:"b", productNumber:"60"}]`、candidate = `"59"`、selfId = `"a"`
+- **期待結果**: `null`
+
+### TC-PNC-002: 自分自身は競合扱いしない
+- **ファイル**: `__tests__/productNumber.test.ts`
+- **優先度**: P0
+- **入力**: products = `[{id:"a", productNumber:"58"}]`、candidate = `"58"`、selfId = `"a"`
+- **期待結果**: `null`
+
+### TC-PNC-003: 他商品と完全一致 → その商品を返す
+- **ファイル**: `__tests__/productNumber.test.ts`
+- **優先度**: P0
+- **入力**: products = `[{id:"a", productNumber:"58"}, {id:"b", productNumber:"60"}]`、candidate = `"60"`、selfId = `"a"`
+- **期待結果**: id = `"b"` の Product
+
+### TC-PNC-004: 前後 trim して比較
+- **ファイル**: `__tests__/productNumber.test.ts`
+- **優先度**: P0
+- **入力**: products = `[{id:"a", productNumber:"58"}]`、candidate = `"  58  "`、selfId = `"x"`
+- **期待結果**: id = `"a"`
+
+### TC-PNC-005: candidate が空文字 / 空白のみ → null（バリデーションは UI 側）
+- **ファイル**: `__tests__/productNumber.test.ts`
+- **優先度**: P1
+- **期待結果**: `null`
+
+### TC-PN-003 (改): assignProductNumbers はカラー数によらず常に [base] 単一を返す（Phase E2）
+- **ファイル**: `__tests__/productNumber.test.ts`
+- **優先度**: P0
+- **入力**: `assignProductNumbers(59, ["黒", "白", "青"])`
+- **期待結果**: `["59"]`（旧仕様の `["59-1", "59-2", "59-3"]` から変更）
+
+### TC-PN-004 (改): assignProductNumbers はカラー 0 件でも [base] を返す
+- **ファイル**: `__tests__/productNumber.test.ts`
+- **優先度**: P0
+- **入力**: `assignProductNumbers(59, [])`
+- **期待結果**: `["59"]`
