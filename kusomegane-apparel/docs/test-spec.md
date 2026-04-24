@@ -21,7 +21,8 @@
 | O. 投稿キャプション 最終キャプション組み立て | 7 | 0 | 0 |
 | P. 文言アセット | 11 | 0 | 0 |
 | Q. 商品番号 競合検出 | 5 | 0 | 0 |
-| **合計** | **103** | **61** | **0** |
+| R. 請求書カタログ抽出 | 5 | 0 | 0 |
+| **合計** | **108** | **61** | **0** |
 
 注: B. 商品番号採番（既存 5 件）のうち TC-PN-003 / 004 は Phase E2 で「枝番採番廃止」仕様に書き換えるため、再 PASS が必要。
 
@@ -454,3 +455,39 @@ Post No.{postNo}
 - **優先度**: P0
 - **入力**: `assignProductNumbers(59, [])`
 - **期待結果**: `["59"]`
+
+## R. 請求書カタログ抽出（Phase G2）
+
+対象モジュール: `lib/print-cost/extractCatalog.ts`
+
+請求書 ParsedInvoice の配列から、bodyCode と color のユニーク一覧を抽出する。
+QuickEstimateCard の datalist 候補に使う。
+
+### TC-CAT-001: 空配列 → 空カタログ
+- **ファイル**: `__tests__/printCost/extractCatalog.test.ts`
+- **優先度**: P0
+- **入力**: `[]`
+- **期待結果**: `{ bodyCodes: [], colors: [] }`
+
+### TC-CAT-002: 同じ bodyCode は集約、sampleCount は出現数の合計
+- **ファイル**: `__tests__/printCost/extractCatalog.test.ts`
+- **優先度**: P0
+- **入力**: 5001-01 の body 行 3 件、5011-01 の body 行 1 件
+- **期待結果**: `bodyCodes` 長さ 2、`5001-01` の `sampleCount === 3`
+
+### TC-CAT-003: bodyCode が同じで bodyName が複数 → 最頻採択
+- **ファイル**: `__tests__/printCost/extractCatalog.test.ts`
+- **優先度**: P0
+- **入力**: bodyCode `5001-01` で bodyName `"A"` 2 件 + `"B"` 1 件
+- **期待結果**: `name === "A"`
+
+### TC-CAT-004: color はユニーク・空文字とノイズ「カラー」を除外
+- **ファイル**: `__tests__/printCost/extractCatalog.test.ts`
+- **優先度**: P0
+- **入力**: color `["ホワイト", "", "カラー", "ホワイト", "ナチュラル・カラー"]`
+- **期待結果**: `["ホワイト", "ナチュラル・カラー"]`（カラー単独除外、`ナチュラル・カラー` は残す）
+
+### TC-CAT-005: bodyCodes は sampleCount desc → code asc でソート
+- **ファイル**: `__tests__/printCost/extractCatalog.test.ts`
+- **優先度**: P1
+- **期待結果**: 同件数の場合は code asc
