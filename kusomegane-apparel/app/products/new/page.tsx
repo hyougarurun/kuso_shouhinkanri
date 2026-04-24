@@ -150,11 +150,7 @@ export default function NewProductPage() {
         >
           ← 前へ
         </button>
-        <div className="text-[11px] text-zinc-500">
-          {state.step === 2 &&
-            state.basic.colors.length > 1 &&
-            `カラー ${state.basic.colors.length} 色 → 枝番自動採番`}
-        </div>
+        <div className="text-[11px] text-zinc-500" />
         {state.step < 3 ? (
           <button
             type="button"

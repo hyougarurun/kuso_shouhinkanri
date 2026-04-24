@@ -24,16 +24,17 @@ describe("productNumber (lib/productNumber.ts)", () => {
     expect(n).toBe(61)
   })
 
-  it("TC-PN-003: assignProductNumbers はカラー1色のとき枝番なしを返す", () => {
+  it("TC-PN-003 (改): assignProductNumbers はカラー数によらず常に [base] を返す（Phase E2）", () => {
     // @critical
-    const nums = assignProductNumbers(59, ["ブラック"])
-    expect(nums).toEqual(["59"])
+    expect(assignProductNumbers(59, ["ブラック"])).toEqual(["59"])
+    expect(
+      assignProductNumbers(59, ["ブラック", "ホワイト", "ネイビー"])
+    ).toEqual(["59"])
   })
 
-  it("TC-PN-004: assignProductNumbers はカラー複数のとき枝番付きを順序通り返す", () => {
+  it("TC-PN-004 (改): assignProductNumbers はカラー 0 件でも [base] を返す", () => {
     // @critical
-    const nums = assignProductNumbers(59, ["ブラック", "ホワイト", "ネイビー"])
-    expect(nums).toEqual(["59-1", "59-2", "59-3"])
+    expect(assignProductNumbers(59, [])).toEqual(["59"])
   })
 })
 

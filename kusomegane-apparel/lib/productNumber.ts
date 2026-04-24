@@ -28,7 +28,7 @@ export function getNextBaseNumber(): number {
   return max + 1
 }
 
-export function assignProductNumbers(base: number, colors: string[]): string[] {
-  if (colors.length <= 1) return [`${base}`]
-  return colors.map((_, i) => `${base}-${i + 1}`)
+export function assignProductNumbers(base: number, _colors: string[]): string[] {
+  void _colors
+  return [`${base}`]
 }

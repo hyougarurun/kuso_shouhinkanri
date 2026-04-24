@@ -23,7 +23,7 @@ export function Step3_Complete({
       <div>
         <h2 className="text-base font-bold">STEP 3: 内容確認・登録</h2>
         <p className="text-[11px] text-zinc-500 mt-0.5">
-          以下の内容で登録します。カラーの数だけレコードが作成されます。
+          以下の内容で登録します（複数色でも 1 商品としてまとめて登録）。
         </p>
       </div>
 

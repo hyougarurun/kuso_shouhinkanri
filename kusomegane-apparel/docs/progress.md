@@ -1,14 +1,14 @@
 # 作業進捗
 
 ## 現在の作業
-- 機能: Phase A.1（文言アセット / caption_assets）完了 + Phase Caption v2 完了
-- 状態: Phase A.1 実装完了（マイグレーション未適用・k2 が Supabase 本体に流し込む必要あり）
-- 次にやること: (1) Supabase にマイグレーション適用 → (2) /products/[id] で実機確認 → (3) /captions UI 実機確認 → Phase C3 着手
-- ブロッカー: `supabase/migrations/20260424000001_caption_assets.sql` を本番 Supabase に apply する必要あり
+- 機能: Phase E1+E2 完了（商品番号インライン編集 + 枝番採番廃止）
+- 状態: 全 Phase 完了済 (A.1 / C2.1 / E1 / E2)
+- 次にやること: (1) /products/[id] で商品番号編集動作確認 → (2) 既存 nn-n データを編集 UI で修正 → (3) Phase C3（3件並列生成）着手
+- ブロッカー: なし
 - 未解決の設計判断: Phase Caption v2 の各キャラ titleLabel の最終確定文字列（k2 から送付予定）
 
 ## 適用待ちマイグレーション
-- `supabase/migrations/20260424000001_caption_assets.sql` — Supabase CLI or SQL Editor で実行
+- なし（caption_assets は 2026-04-24 適用済み）
 
 ## テスト状況（サマリー）
 - A〜K（既存）: 合計 61 件 全 PASS
@@ -17,9 +17,13 @@
 - N. 投稿キャプション カウンター: 6 件 ✅ PASS（Phase C2.1）
 - O. 投稿キャプション 最終キャプション組み立て: 7 件 ✅ PASS（Phase C2.1）
 - P. 文言アセット: 11 件 ✅ PASS（Phase A.1）
-- vitest 実行上: 23 ファイル 130 件 all PASS
+- Q. 商品番号 競合検出: 5 件 ✅ PASS（Phase E1）
+- B. 商品番号採番（TC-PN-003/004 改）: 新仕様で再 PASS（Phase E2）
+- vitest 実行上: 23 ファイル 135 件 all PASS
 
 ## 直近の完了タスク（新しい順）
+- 2026-04-24 Phase E2: 枝番採番（nn-n）廃止 — 複数色でも単一商品番号
+- 2026-04-24 Phase E1: 商品番号インライン編集 + 競合チェック
 - 2026-04-24 Phase A.1: 文言アセット（caption_assets / ボタン1クリックでコピー・追加・削除）
 - 2026-04-23 Phase C2.1: Phase Caption v2（6キャラ雛形ベース + カウンター + composeCaption）
 - 2026-04-22 fix(ProductCard): gallery 追加サムネが 'thumb' 表示になる問題を修正 (3e0028f)
