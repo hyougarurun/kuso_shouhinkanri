@@ -19,7 +19,8 @@
 | M. 投稿キャプション キャラ + プロンプト組み立て | 8 | 0 | 0 |
 | N. 投稿キャプション カウンター | 6 | 0 | 0 |
 | O. 投稿キャプション 最終キャプション組み立て | 7 | 0 | 0 |
-| **合計** | **87** | **61** | **0** |
+| P. 文言アセット | 11 | 0 | 0 |
+| **合計** | **98** | **61** | **0** |
 
 ## H. 画像マイグレーション（Phase 0.7）
 
@@ -335,3 +336,71 @@ Post No.{postNo}
 - **優先度**: P1
 - **入力**: `{ title: "", episode: 1, characterId: "char-harimeganezumi", body: "ほげ", postNo: 1 }`
 - **期待結果**: 1 行目が `"#1"`（先頭にゴミ文字なし）。UI 側で必須バリデーションを掛ける前提
+
+## P. 文言アセット（Phase A.1）
+
+対象モジュール: `lib/captionAssets/format.ts`, `lib/supabase/captionAssetsParse.ts`
+
+商品概要キャプション編集画面に出す「定型文言ボタン」のラベル自動生成・カテゴリ集計、および DB ↔ TS 変換。
+
+### TC-AS-001: deriveLabel — explicit が非空ならそのまま返す
+- **ファイル**: `__tests__/captionAssets/format.test.ts`
+- **優先度**: P0
+- **入力**: `deriveLabel("本文ABCDE", "期間限定")`
+- **期待結果**: `"期間限定"`
+
+### TC-AS-002: deriveLabel — explicit が空なら body 先頭 20 文字
+- **ファイル**: `__tests__/captionAssets/format.test.ts`
+- **優先度**: P0
+- **入力**: `deriveLabel("あいうえお" + "あいうえお" + "あいうえお" + "あいうえお" + "あいうえお")` (25文字)
+- **期待結果**: 先頭 20 文字（`"あいうえお" * 4`）
+
+### TC-AS-003: deriveLabel — explicit が空白のみなら body から自動生成
+- **ファイル**: `__tests__/captionAssets/format.test.ts`
+- **優先度**: P0
+- **入力**: `deriveLabel("本文", "  　 ")`
+- **期待結果**: `"本文"`
+
+### TC-AS-004: deriveLabel — body の前後改行・空白は除いて先頭から取る
+- **ファイル**: `__tests__/captionAssets/format.test.ts`
+- **優先度**: P0
+- **入力**: `deriveLabel("\n\n  ABCDE\n  ", "")`
+- **期待結果**: `"ABCDE"`
+
+### TC-AS-005: deriveLabel — body も空白のみなら "(無題)"
+- **ファイル**: `__tests__/captionAssets/format.test.ts`
+- **優先度**: P0
+- **入力**: `deriveLabel("   \n  ", "")`
+- **期待結果**: `"(無題)"`
+
+### TC-AS-006: listCategories — ユニーク・空除外・出現順保持
+- **ファイル**: `__tests__/captionAssets/format.test.ts`
+- **優先度**: P0
+- **入力**: 4 件、category が `["販売条件", "", "配送", "販売条件"]`
+- **期待結果**: `["販売条件", "配送"]`
+
+### TC-AS-007: groupByCategory — カテゴリごとにまとめ、未分類("")を末尾
+- **ファイル**: `__tests__/captionAssets/format.test.ts`
+- **優先度**: P0
+- **期待結果**: 戻り値の最後の要素が `category: ""` のグループ
+
+### TC-AS-008: groupByCategory — 既存の updated_at desc 順を各グループ内で維持
+- **ファイル**: `__tests__/captionAssets/format.test.ts`
+- **優先度**: P1
+- **期待結果**: 入力順が保たれる（呼び出し側で order 済みを前提）
+
+### TC-AS-009: parseCaptionAsset — DB Row → TS（snake_case → camelCase）
+- **ファイル**: `__tests__/captionAssets/parse.test.ts`
+- **優先度**: P0
+- **入力**: `{ id: "asset_1", label: "L", body: "B", category: "C", created_at: "2026-04-24T10:00:00Z", updated_at: "2026-04-24T11:00:00Z" }`
+- **期待結果**: `{ id: "asset_1", label: "L", body: "B", category: "C", createdAt: "2026-04-24T10:00:00Z", updatedAt: "2026-04-24T11:00:00Z" }`
+
+### TC-AS-010: serializeCaptionAsset — TS → DB Row Insert（id/created_at/updated_at は除外）
+- **ファイル**: `__tests__/captionAssets/parse.test.ts`
+- **優先度**: P0
+- **期待結果**: `{ label, body, category }` のみ
+
+### TC-AS-011: serializeCaptionAsset — category undefined / null は空文字に正規化
+- **ファイル**: `__tests__/captionAssets/parse.test.ts`
+- **優先度**: P1
+- **期待結果**: `category: ""`
