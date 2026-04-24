@@ -51,7 +51,11 @@ function ProductCardImpl({ product, onClearEstimation }: ProductCardProps) {
       onClick={onClick}
       className={
         "flex gap-4 bg-white rounded-lg border p-4 shadow-sm hover:shadow-md hover:border-zinc-300 transition cursor-pointer active:cursor-grabbing select-none " +
-        (hasDrive ? "border-lime-300 ring-1 ring-lime-300" : "border-zinc-200")
+        (status === "done"
+          ? "border-green-400 ring-1 ring-green-400"
+          : hasDrive
+            ? "border-lime-300 ring-1 ring-lime-300"
+            : "border-zinc-200")
       }
     >
       {/* 左: メインサムネ 176px */}

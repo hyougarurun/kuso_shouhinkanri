@@ -139,11 +139,27 @@ export default function ProductDetailPage() {
 
   function toggleStep(stepNumber: number) {
     if (!product) return
-    const steps: FlowStep[] = product.steps.map((s) => {
-      if (s.stepNumber !== stepNumber) return s
-      if (s.status === "done") return { ...s, status: "pending", completedAt: undefined }
-      return { ...s, status: "done", completedAt: new Date().toISOString() }
-    })
+    const target = product.steps.find((s) => s.stepNumber === stepNumber)
+    const willComplete = target?.status !== "done"
+    const now = new Date().toISOString()
+
+    let steps: FlowStep[]
+    if (stepNumber === 8 && willComplete) {
+      // 「販売準備完了」を done にすると、未完了の前段ステップも全て done に補完
+      steps = product.steps.map((s) =>
+        s.status === "done"
+          ? s
+          : { ...s, status: "done" as const, completedAt: now }
+      )
+    } else {
+      steps = product.steps.map((s) => {
+        if (s.stepNumber !== stepNumber) return s
+        if (s.status === "done") {
+          return { ...s, status: "pending" as const, completedAt: undefined }
+        }
+        return { ...s, status: "done" as const, completedAt: now }
+      })
+    }
     const nextCurrent = steps.findIndex((s) => s.status !== "done")
     update({
       ...product,
