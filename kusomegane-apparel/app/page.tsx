@@ -17,6 +17,7 @@ import { Summary } from "@/components/Summary"
 import { FilterTabs } from "@/components/FilterTabs"
 import { MonthFilter, MONTH_FILTER_UNASSIGNED } from "@/components/MonthFilter"
 import { QuickEstimateCard } from "@/components/QuickEstimateCard"
+import { HomeMemo } from "@/components/HomeMemo"
 
 const LS_LOCK = "kuso:home:filterLocked"
 const LS_FILTER = "kuso:home:filter"
@@ -173,10 +174,11 @@ export default function Home() {
         )}
       </section>
 
-      {/* 右: 加工費推定（スクロール追従） */}
+      {/* 右: 加工費推定 + メモ（スクロール追従） */}
       <aside className="col-span-1">
-        <div className="sticky top-4">
+        <div className="sticky top-4 space-y-3">
           <QuickEstimateCard onRegistered={handleEstimateRegistered} />
+          <HomeMemo />
         </div>
       </aside>
     </div>
