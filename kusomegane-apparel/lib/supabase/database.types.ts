@@ -182,6 +182,15 @@ export type CreatorBackgroundRow = {
   updated_at: string
 }
 
+export type CaptionAssetRow = {
+  id: string
+  label: string
+  body: string
+  category: string
+  created_at: string
+  updated_at: string
+}
+
 export type BaseModelRow = {
   id: string
   gender: BaseModelGenderDB
@@ -299,6 +308,15 @@ export type Database = {
           updated_at?: string
         }
         Update: Partial<BaseModelRow>
+        Relationships: []
+      }
+      caption_assets: {
+        Row: CaptionAssetRow
+        Insert: Omit<CaptionAssetRow, "created_at" | "updated_at"> & {
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<CaptionAssetRow>
         Relationships: []
       }
     }

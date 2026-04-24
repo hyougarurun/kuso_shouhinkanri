@@ -191,3 +191,16 @@ export interface BaseModel {
   createdAt: string
   updatedAt: string
 }
+
+/**
+ * 商品概要キャプションの定型文ライブラリ。
+ * 「※※※※期間限定×数量限定です※※※※※」のような商品横断で使う定型句を共有プールで持つ。
+ */
+export interface CaptionAsset {
+  id: string
+  label: string
+  body: string
+  category: string
+  createdAt: string
+  updatedAt: string
+}

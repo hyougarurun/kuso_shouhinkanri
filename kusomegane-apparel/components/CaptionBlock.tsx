@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Product } from "@/types"
+import { CaptionAssetsPanel } from "@/components/CaptionAssetsPanel"
 
 type Props = {
   product?: Product
@@ -17,6 +18,25 @@ export function CaptionBlock({ product, text, onUpdate }: Props) {
   const [copied, setCopied] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  function insertAtCursor(body: string) {
+    const ta = textareaRef.current
+    if (!ta) {
+      setDraft((prev) => (prev ? `${prev}\n${body}` : body))
+      return
+    }
+    const start = ta.selectionStart
+    const end = ta.selectionEnd
+    const next = draft.slice(0, start) + body + draft.slice(end)
+    setDraft(next)
+    requestAnimationFrame(() => {
+      if (!textareaRef.current) return
+      const pos = start + body.length
+      textareaRef.current.focus()
+      textareaRef.current.setSelectionRange(pos, pos)
+    })
+  }
 
   // 親の captionText が変わった（他操作含む）時の同期
   useEffect(() => {
@@ -133,8 +153,11 @@ export function CaptionBlock({ product, text, onUpdate }: Props) {
         </div>
       )}
 
+      <CaptionAssetsPanel onInsert={editing ? insertAtCursor : undefined} />
+
       {editing ? (
         <textarea
+          ref={textareaRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           rows={12}

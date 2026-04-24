@@ -1,11 +1,14 @@
 # 作業進捗
 
 ## 現在の作業
-- 機能: Phase Caption v2（6キャラ雛形ベースへリライト）
-- 状態: Phase C2.1（lib / API / UI リライト）完了
-- 次にやること: /captions UI を実機で通し確認 → Phase C3（3件並列生成・各カード再生成）着手
-- ブロッカー: なし
-- 未解決の設計判断: 各キャラ titleLabel の最終確定文字列（k2 から全員分送付予定）
+- 機能: Phase A.1（文言アセット / caption_assets）完了 + Phase Caption v2 完了
+- 状態: Phase A.1 実装完了（マイグレーション未適用・k2 が Supabase 本体に流し込む必要あり）
+- 次にやること: (1) Supabase にマイグレーション適用 → (2) /products/[id] で実機確認 → (3) /captions UI 実機確認 → Phase C3 着手
+- ブロッカー: `supabase/migrations/20260424000001_caption_assets.sql` を本番 Supabase に apply する必要あり
+- 未解決の設計判断: Phase Caption v2 の各キャラ titleLabel の最終確定文字列（k2 から送付予定）
+
+## 適用待ちマイグレーション
+- `supabase/migrations/20260424000001_caption_assets.sql` — Supabase CLI or SQL Editor で実行
 
 ## テスト状況（サマリー）
 - A〜K（既存）: 合計 61 件 全 PASS
@@ -13,9 +16,11 @@
 - M. 投稿キャプション キャラ + プロンプト組み立て: 8 件 ✅ PASS（Phase C2.1）
 - N. 投稿キャプション カウンター: 6 件 ✅ PASS（Phase C2.1）
 - O. 投稿キャプション 最終キャプション組み立て: 7 件 ✅ PASS（Phase C2.1）
-- vitest 実行上: 21 ファイル 119 件 all PASS
+- P. 文言アセット: 11 件 ✅ PASS（Phase A.1）
+- vitest 実行上: 23 ファイル 130 件 all PASS
 
 ## 直近の完了タスク（新しい順）
+- 2026-04-24 Phase A.1: 文言アセット（caption_assets / ボタン1クリックでコピー・追加・削除）
 - 2026-04-23 Phase C2.1: Phase Caption v2（6キャラ雛形ベース + カウンター + composeCaption）
 - 2026-04-22 fix(ProductCard): gallery 追加サムネが 'thumb' 表示になる問題を修正 (3e0028f)
 - 2026-04-22 feat: 背景タイトル後編集 + Animator ライブラリ Supabase 化 (3d5696e)
