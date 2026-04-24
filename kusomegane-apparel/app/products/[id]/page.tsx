@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { Product, FlowStep, AssetStatus } from "@/types"
 import { storage, hydrateStorage } from "@/lib/storage"
+import { findConflictingProduct } from "@/lib/productNumber"
 import { getProductStatus } from "@/lib/productStatus"
 import { computeSampleCountdown } from "@/lib/sampleCountdown"
 import { duplicateProduct } from "@/lib/productDuplicate"
@@ -36,6 +37,8 @@ export default function ProductDetailPage() {
   const id = Array.isArray(params?.id) ? params.id[0] : params?.id
   const [product, setProduct] = useState<Product | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const [editingNumber, setEditingNumber] = useState(false)
+  const [draftNumber, setDraftNumber] = useState("")
 
   useEffect(() => {
     if (!id) return
@@ -97,6 +100,41 @@ export default function ProductDetailPage() {
   function update(next: Product) {
     setProduct(next)
     storage.upsertProduct(next)
+  }
+
+  function startEditNumber() {
+    if (!product) return
+    setDraftNumber(product.productNumber)
+    setEditingNumber(true)
+  }
+
+  function cancelEditNumber() {
+    setEditingNumber(false)
+    setDraftNumber("")
+  }
+
+  function commitEditNumber() {
+    if (!product) return
+    const trimmed = draftNumber.trim()
+    if (!trimmed || trimmed === product.productNumber) {
+      cancelEditNumber()
+      return
+    }
+    const conflict = findConflictingProduct(trimmed, product.id, storage.getProducts())
+    if (conflict) {
+      alert(`商品番号「${trimmed}」は別商品（${conflict.name}）で使用中です`)
+      return
+    }
+    if (
+      !confirm(
+        `商品番号を「${product.productNumber}」→「${trimmed}」に変更します。\n\nSheets / Drive 側のフォルダ名・行は手動で更新してください。続行しますか？`
+      )
+    ) {
+      return
+    }
+    update({ ...product, productNumber: trimmed })
+    setEditingNumber(false)
+    setDraftNumber("")
   }
 
   function toggleStep(stepNumber: number) {
@@ -194,9 +232,24 @@ export default function ProductDetailPage() {
           ← 戻る
         </Link>
         <div className="flex items-baseline gap-2 min-w-0">
-          <span className="text-[11px] font-bold text-zinc-500 shrink-0">
-            No.{product.productNumber}
-          </span>
+          {editingNumber ? (
+            <ProductNumberEditor
+              draft={draftNumber}
+              currentId={product.id}
+              onChange={setDraftNumber}
+              onSubmit={commitEditNumber}
+              onCancel={cancelEditNumber}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={startEditNumber}
+              title="クリックで編集"
+              className="text-[11px] font-bold text-zinc-500 shrink-0 hover:text-zinc-900 hover:underline cursor-pointer"
+            >
+              No.{product.productNumber}
+            </button>
+          )}
           <span className="text-sm font-bold text-zinc-900 truncate">
             {product.name}
           </span>
@@ -308,6 +361,72 @@ export default function ProductDetailPage() {
           </section>
         </aside>
       </div>
+    </div>
+  )
+}
+
+interface ProductNumberEditorProps {
+  draft: string
+  currentId: string
+  onChange: (v: string) => void
+  onSubmit: () => void
+  onCancel: () => void
+}
+
+function ProductNumberEditor({
+  draft,
+  currentId,
+  onChange,
+  onSubmit,
+  onCancel,
+}: ProductNumberEditorProps) {
+  const trimmed = draft.trim()
+  const conflict = useMemo(
+    () => findConflictingProduct(trimmed, currentId, storage.getProducts()),
+    [trimmed, currentId]
+  )
+  const canSubmit = trimmed.length > 0 && !conflict
+
+  return (
+    <div className="inline-flex flex-col gap-0.5">
+      <div className="inline-flex items-center gap-1">
+        <span className="text-[11px] font-bold text-zinc-500 shrink-0">No.</span>
+        <input
+          type="text"
+          autoFocus
+          value={draft}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && canSubmit) onSubmit()
+            else if (e.key === "Escape") onCancel()
+          }}
+          className={`text-[11px] font-bold w-24 rounded border px-1 py-0.5 ${
+            conflict
+              ? "border-red-400 bg-red-50 text-red-700"
+              : "border-zinc-300 bg-white text-zinc-900"
+          }`}
+        />
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={!canSubmit}
+          className="text-[10px] font-bold rounded bg-brand-yellow text-black px-2 py-0.5 hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          保存
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-[10px] font-bold rounded border border-zinc-300 bg-white text-zinc-700 px-2 py-0.5 hover:bg-zinc-50"
+        >
+          ×
+        </button>
+      </div>
+      {conflict && (
+        <div className="text-[10px] text-red-600 font-bold">
+          ⚠ 商品「{conflict.name}」（id: …{conflict.id.slice(-6)}）と重複しています
+        </div>
+      )}
     </div>
   )
 }

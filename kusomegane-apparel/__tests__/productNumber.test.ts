@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest"
-import { getNextBaseNumber, assignProductNumbers } from "@/lib/productNumber"
+import {
+  getNextBaseNumber,
+  assignProductNumbers,
+  findConflictingProduct,
+} from "@/lib/productNumber"
 import { storage } from "@/lib/storage"
 import { makeProduct } from "./fixtures/product"
 
@@ -30,5 +34,40 @@ describe("productNumber (lib/productNumber.ts)", () => {
     // @critical
     const nums = assignProductNumbers(59, ["ブラック", "ホワイト", "ネイビー"])
     expect(nums).toEqual(["59-1", "59-2", "59-3"])
+  })
+})
+
+describe("findConflictingProduct (Phase E1)", () => {
+  it("TC-PNC-001: 競合なし → null", () => {
+    const products = [
+      makeProduct({ id: "a", productNumber: "58" }),
+      makeProduct({ id: "b", productNumber: "60" }),
+    ]
+    expect(findConflictingProduct("59", "a", products)).toBeNull()
+  })
+
+  it("TC-PNC-002: 自分自身は競合扱いしない", () => {
+    const products = [makeProduct({ id: "a", productNumber: "58" })]
+    expect(findConflictingProduct("58", "a", products)).toBeNull()
+  })
+
+  it("TC-PNC-003: 他商品と完全一致 → その商品を返す", () => {
+    const products = [
+      makeProduct({ id: "a", productNumber: "58" }),
+      makeProduct({ id: "b", productNumber: "60" }),
+    ]
+    const hit = findConflictingProduct("60", "a", products)
+    expect(hit?.id).toBe("b")
+  })
+
+  it("TC-PNC-004: 前後 trim して比較", () => {
+    const products = [makeProduct({ id: "a", productNumber: "58" })]
+    expect(findConflictingProduct("  58  ", "x", products)?.id).toBe("a")
+  })
+
+  it("TC-PNC-005: candidate が空文字 / 空白のみ → null", () => {
+    const products = [makeProduct({ id: "a", productNumber: "58" })]
+    expect(findConflictingProduct("", "x", products)).toBeNull()
+    expect(findConflictingProduct("   ", "x", products)).toBeNull()
   })
 })
