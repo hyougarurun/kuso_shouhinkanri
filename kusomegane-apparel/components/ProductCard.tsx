@@ -121,6 +121,11 @@ function ProductCardImpl({ product, onClearEstimation }: ProductCardProps) {
           <div className="text-xs text-zinc-500 truncate mt-1">
             {[product.series, product.colors.join("・")].filter(Boolean).join(" · ")}
           </div>
+          {product.sizes.length > 0 && (
+            <div className="text-xs text-zinc-500 truncate mt-0.5">
+              <span className="text-zinc-400">サイズ:</span> {product.sizes.join("/")}
+            </div>
+          )}
           {product.estimation && (
             <div className="mt-1 inline-flex items-center gap-2 rounded-md bg-amber-50 border border-amber-200 px-2 py-1 max-w-full">
               <span className="text-[10px] font-bold text-amber-700 leading-none shrink-0">
