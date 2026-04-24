@@ -50,14 +50,20 @@ function ProductCardImpl({ product, onClearEstimation }: ProductCardProps) {
       onDragStart={onDragStart}
       onClick={onClick}
       className={
-        "flex gap-4 bg-white rounded-lg border p-4 shadow-sm hover:shadow-md hover:border-zinc-300 transition cursor-pointer active:cursor-grabbing select-none " +
+        "relative flex gap-4 bg-white rounded-lg border p-4 shadow-sm hover:shadow-md hover:border-zinc-300 transition cursor-pointer active:cursor-grabbing select-none overflow-hidden " +
         (status === "done"
           ? "border-green-400 ring-1 ring-green-400"
-          : hasDrive
-            ? "border-lime-300 ring-1 ring-lime-300"
-            : "border-zinc-200")
+          : "border-zinc-200")
       }
     >
+      {hasDrive && (
+        <div
+          aria-label="Drive 格納済み"
+          title="Drive 格納済み"
+          className="absolute left-0 top-0 bottom-0 w-1 bg-brand-yellow"
+        />
+      )}
+
       {/* 左: メインサムネ 176px */}
       <div className="relative w-44 h-44 shrink-0 rounded-md overflow-hidden bg-zinc-100">
         {mainImage ? (
