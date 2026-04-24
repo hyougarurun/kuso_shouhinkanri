@@ -12,7 +12,12 @@ import { computeSampleCountdown } from "@/lib/sampleCountdown"
 
 export const PRODUCT_DRAG_TYPE = "application/x-kusomegane-product-id"
 
-function ProductCardImpl({ product }: { product: Product }) {
+interface ProductCardProps {
+  product: Product
+  onClearEstimation?: (productId: string) => void
+}
+
+function ProductCardImpl({ product, onClearEstimation }: ProductCardProps) {
   const router = useRouter()
   const status = getProductStatus(product)
   const { done, total } = getProgress(product)
@@ -129,7 +134,26 @@ function ProductCardImpl({ product }: { product: Product }) {
 
       {/* 中右: 推定加工費 */}
       {product.estimation && (
-        <div className="hidden md:flex shrink-0 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 flex-col justify-center items-center min-w-[140px]">
+        <div className="hidden md:flex relative shrink-0 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 flex-col justify-center items-center min-w-[140px]">
+          {onClearEstimation && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (
+                  confirm(
+                    `「${product.name}」の推定加工費を取り消します。よろしいですか？`
+                  )
+                ) {
+                  onClearEstimation(product.id)
+                }
+              }}
+              title="推定加工費を取り消す"
+              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full text-[10px] leading-none text-amber-700/70 hover:text-red-700 hover:bg-red-50 flex items-center justify-center"
+            >
+              ×
+            </button>
+          )}
           <div className="text-[11px] text-amber-700 leading-none">
             推定加工費
           </div>
@@ -169,6 +193,7 @@ function ProductCardImpl({ product }: { product: Product }) {
 export const ProductCard = memo(ProductCardImpl, (prev, next) => {
   return (
     prev.product.id === next.product.id &&
-    prev.product.updatedAt === next.product.updatedAt
+    prev.product.updatedAt === next.product.updatedAt &&
+    prev.onClearEstimation === next.onClearEstimation
   )
 })

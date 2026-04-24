@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Product } from "@/types"
 import { storage, hydrateStorage } from "@/lib/storage"
 import { seedIfEmpty } from "@/lib/seed"
@@ -93,6 +93,20 @@ export default function Home() {
     )
   }
 
+  const handleClearEstimation = useCallback((productId: string) => {
+    setProducts((prev) => {
+      const target = prev.find((p) => p.id === productId)
+      if (!target) return prev
+      const next: Product = {
+        ...target,
+        estimation: undefined,
+        updatedAt: new Date().toISOString(),
+      }
+      storage.upsertProduct(next)
+      return prev.map((p) => (p.id === productId ? next : p))
+    })
+  }, [])
+
   return (
     <div className="grid grid-cols-3 gap-6 min-h-[calc(100vh-96px)]">
       {/* 左: 商品管理 (span 2) */}
@@ -149,7 +163,11 @@ export default function Home() {
         ) : (
           <div className="flex flex-col gap-2">
             {visible.map((p) => (
-              <ProductCard key={p.id} product={p} />
+              <ProductCard
+                key={p.id}
+                product={p}
+                onClearEstimation={handleClearEstimation}
+              />
             ))}
           </div>
         )}
