@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>アリガトRUN 🏃</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  background: radial-gradient(ellipse at top, #2a2a4e 0%, #1a1a2e 70%);
+  color: #eaeaea;
+  min-height: 100%;
+  padding: 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+#app { max-width: 1000px; margin: 0 auto; }
+.title { text-align: center; padding: 20px 0; }
+.title h1 {
+  font-size: clamp(2.2rem, 7vw, 4rem);
+  background: linear-gradient(90deg, #ff6b9d, #ffd166, #06d6a0, #118ab2);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: 0.08em;
+  font-weight: 900;
+}
+.title p { color: #a0a0b8; margin-top: 10px; font-size: 1.02rem; }
+.card {
+  background: #24243e;
+  border-radius: 14px;
+  padding: 18px;
+  margin: 14px 0;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+}
+h2 { margin-bottom: 12px; font-size: 1.25rem; }
+h3 { margin-bottom: 10px; font-size: 1.05rem; color: #ffd166; }
+.muted { color: #a0a0b8; }
+.small { font-size: 0.85rem; }
+.tiny { font-size: 0.75rem; }
+button {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff6b9d, #ff8cbe);
+  color: white;
+  font-weight: bold;
+  transition: transform 0.1s, opacity 0.2s, box-shadow 0.2s;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.2);
+}
+button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(255,107,157,0.3); }
+button:active:not(:disabled) { transform: translateY(0); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+button.secondary { background: linear-gradient(135deg, #444466, #55557a); }
+button.ghost { background: transparent; color: #a0a0b8; border: 1px solid #444466; box-shadow: none; }
+input[type=text] {
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 11px 14px;
+  border: 2px solid #444466;
+  border-radius: 10px;
+  background: #1a1a2e;
+  color: white;
+  width: 100%;
+}
+input[type=text]:focus { border-color: #ff6b9d; outline: none; }
+.banner {
+  background: linear-gradient(90deg, #ff6b9d22, transparent);
+  border-left: 4px solid #ff6b9d;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 10px 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.rank-rule {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: 0.78rem;
+}
+.rank-rule .pill {
+  background: #444466; padding: 3px 8px; border-radius: 12px;
+}
+.rank-rule .pill.good { background: linear-gradient(135deg, #ffd700, #ffae00); color: #1a1a2e; font-weight: bold; }
+.rank-rule .pill.bad { background: #ff6b9d; color: white; font-weight: bold; }
+
+/* Player chips */
+.player-list, .player-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.player-list { margin: 12px 0; }
+.player-chip {
+  background: #444466;
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-weight: bold;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.92rem;
+  user-select: none;
+}
+.player-chip.big {
+  padding: 10px 16px; font-size: 1rem; cursor: grab;
+  transition: all 0.15s;
+  touch-action: none;
+  -webkit-user-select: none;
+}
+.player-chip.big:hover { background: #55557a; transform: translateY(-2px); }
+.player-chip.big.selected {
+  background: linear-gradient(135deg, #ff6b9d, #ff8cbe);
+  color: white;
+  box-shadow: 0 0 0 3px rgba(255,107,157,0.4), 0 4px 12px rgba(255,107,157,0.4);
+}
+.player-chip.big.dragging { opacity: 0.25; }
+.player-chip.big .pick-count {
+  background: rgba(255,255,255,0.18);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.player-chip.big.selected .pick-count { background: rgba(0,0,0,0.22); }
+.player-chip.small.placed {
+  background: #ffd166; color: #1a1a2e; padding: 5px 10px; font-size: 0.82rem;
+  cursor: pointer; transition: all 0.15s;
+}
+.player-chip.small.placed:hover { background: #ff6b9d; color: white; }
+.player-chip .remove {
+  cursor: pointer; color: #ff6b9d; font-weight: bold;
+  background: rgba(255,107,157,0.15);
+  width: 22px; height: 22px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.9rem;
+}
+.player-chip .remove:hover { background: rgba(255,107,157,0.35); }
+
+/* Drag ghost */
+.drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  background: linear-gradient(135deg, #ff6b9d, #ff8cbe);
+  color: white;
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.45);
+  z-index: 2000;
+  transform: translate(-50%, -50%) rotate(-3deg);
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* Runner grid */
+.runner-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+.runner-card {
+  background: #2e2e52;
+  border: 3px solid transparent;
+  border-radius: 14px;
+  padding: 14px;
+  transition: all 0.2s;
+  position: relative;
+}
+.runner-card.clickable { cursor: pointer; border-color: rgba(255,107,157,0.35); }
+.runner-card.clickable:hover { border-color: #ff6b9d; transform: translateY(-3px); box-shadow: 0 8px 20px rgba(255,107,157,0.2); }
+.runner-card.drag-target {
+  border-color: #06d6a0 !important;
+  transform: translateY(-5px);
+  box-shadow: 0 12px 28px rgba(6,214,160,0.45);
+  background: #1f3a33;
+}
+.runner-header { display: flex; gap: 12px; align-items: center; }
+.runner-header .emoji { font-size: 2.6rem; line-height: 1; }
+.runner-header .name { font-weight: bold; font-size: 1.1rem; }
+.runner-header .bio { font-size: 0.82rem; color: #a0a0b8; margin-top: 2px; }
+.stats { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+.stat-row { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; }
+.stat-label { min-width: 52px; color: #a0a0b8; }
+.stat-bar .filled { color: #ffd166; letter-spacing: 1px; }
+.stat-bar .empty { color: #444466; letter-spacing: 1px; }
+.condition { font-weight: bold; }
+.ult-box {
+  background: linear-gradient(90deg, rgba(255,215,0,0.14), rgba(255,107,157,0.08));
+  border-left: 3px solid #ffd700;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin: 4px 0;
+}
+.ult-name { font-weight: bold; font-size: 0.88rem; color: #ffd700; }
+.ult-desc { font-size: 0.78rem; color: #d0d0d8; margin-top: 1px; }
+.stat-row.training { color: #ff8cbe; font-weight: 600; font-size: 0.85rem; }
+.bet-slot {
+  margin-top: 10px;
+  min-height: 44px;
+  background: rgba(0,0,0,0.28);
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  border: 2px dashed transparent;
+  transition: all 0.2s;
+}
+.bet-slot.empty { border-color: rgba(255,255,255,0.15); justify-content: center; min-height: 44px; }
+
+/* Race track */
+.track-card { padding: 10px; background: #0f2f18; }
+.track-wrapper { position: relative; width: 100%; border-radius: 10px; overflow: hidden; }
+svg#track { width: 100%; height: auto; display: block; }
+.countdown-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(5rem, 20vw, 13rem);
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 0 40px rgba(255,107,157,0.8), 0 0 20px rgba(255,209,102,0.6);
+  z-index: 10;
+  letter-spacing: -0.05em;
+}
+.countdown-overlay.animate { animation: countdownPulse 0.85s ease-out; }
+@keyframes countdownPulse {
+  0% { transform: scale(1.8); opacity: 0; }
+  30% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.8); opacity: 0.3; }
+}
+
+/* Runner SVG */
+.runner-svg circle { filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); transition: stroke 0.15s; }
+.runner-svg text { pointer-events: none; }
+.runner-svg.ult circle {
+  stroke: #ffd700;
+  stroke-width: 4;
+  filter: drop-shadow(0 0 10px gold) drop-shadow(0 0 18px #ff6b9d);
+  animation: ultPulse 0.3s infinite alternate;
+}
+@keyframes ultPulse { from { stroke-width: 3.5; } to { stroke-width: 5.5; } }
+
+/* Live ranking */
+.live-ranking { display: flex; flex-direction: column; gap: 6px; }
+.rank-row {
+  display: flex; align-items: center; gap: 10px;
+  background: #2e2e52;
+  padding: 8px 10px; border-radius: 8px;
+  transition: all 0.3s;
+}
+.rank-row.finished { background: linear-gradient(90deg, #1f3a33, #2e2e52); border-left: 4px solid #06d6a0; }
+.rank-pos {
+  min-width: 50px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  background: #444466; border-radius: 8px; font-weight: bold; font-size: 0.88rem;
+}
+.rank-row:nth-child(1) .rank-pos { background: linear-gradient(135deg, #ffd700, #ffae00); color: #1a1a2e; }
+.rank-row:nth-child(2) .rank-pos { background: linear-gradient(135deg, #d0d0d0, #909090); color: #1a1a2e; }
+.rank-row:nth-child(3) .rank-pos { background: linear-gradient(135deg, #cd7f32, #a0522d); color: white; }
+.rank-emoji { font-size: 1.4rem; width: 28px; text-align: center; }
+.rank-body { flex: 1; min-width: 0; }
+.rank-name { font-weight: bold; font-size: 0.94rem; }
+.rank-lap { font-size: 0.78rem; color: #ffd166; }
+.rank-bettors { color: #a0a0b8; font-size: 0.76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Commentary feed */
+.commentary-feed { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
+.comment {
+  background: #2e2e52; padding: 6px 12px; border-radius: 6px;
+  font-size: 0.9rem;
+  animation: commentSlide 0.3s ease-out;
+}
+.comment:first-child { background: linear-gradient(90deg, #ff6b9d33, #2e2e52); border-left: 3px solid #ff6b9d; font-weight: bold; }
+.comment.ult { background: linear-gradient(90deg, rgba(255,215,0,0.3), #2e2e52); border-left: 3px solid #ffd700; font-weight: bold; }
+@keyframes commentSlide {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Race layout — track left, ranking sticky right */
+.race-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 14px;
+  align-items: start;
+  margin: 14px 0;
+}
+.race-main { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.race-side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 14px; }
+.race-main > .card, .race-side > .card { margin: 0; }
+.race-side .live-ranking { max-height: 75vh; overflow-y: auto; }
+.race-side .rank-row { padding: 7px 8px; gap: 8px; }
+.race-side .rank-pos { min-width: 44px; height: 28px; font-size: 0.82rem; }
+.race-side .rank-emoji { font-size: 1.3rem; width: 24px; }
+.race-side .rank-name { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.race-side .rank-lap { font-size: 0.76rem; }
+.race-side .rank-bettors { font-size: 0.74rem; }
+@media (max-width: 900px) {
+  .race-layout { grid-template-columns: 1fr; }
+  .race-side { position: static; }
+  .race-side .live-ranking { max-height: none; }
+}
+
+/* Result */
+.ranking-list { list-style: none; }
+.ranking-list li {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 8px;
+  border-bottom: 1px solid #333355;
+}
+.ranking-list li:last-child { border-bottom: none; }
+.rank-badge {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: #444466;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+.rank-1 { background: linear-gradient(135deg, #ffd700, #ffae00); color: #1a1a2e; }
+.rank-2 { background: linear-gradient(135deg, #d0d0d0, #909090); color: #1a1a2e; }
+.rank-3 { background: linear-gradient(135deg, #cd7f32, #a0522d); color: white; }
+.assignment {
+  background: #2e2e52;
+  padding: 14px;
+  border-radius: 10px;
+  margin: 10px 0;
+}
+.assignment.winner { background: linear-gradient(135deg, #1f3a33, #245545); border: 1px solid #06d6a0; }
+.assignment.safe { background: #1f3a33; border-left: 4px solid #06d6a0; margin: 6px 0; padding: 10px 14px; }
+.assignment.extra { border-left: 4px solid #ff6b9d; background: #3a2438; margin: 6px 0; padding: 10px 14px; }
+.pick-line { padding: 4px 0; font-size: 0.94rem; }
+.pick-line.exempt { color: #06d6a0; }
+.pick-line .mult-tag {
+  display: inline-block; background: #444466; color: #ffd166;
+  font-size: 0.72rem; padding: 1px 7px; border-radius: 8px; margin-left: 6px;
+}
+.big { font-size: 1.15rem; font-weight: bold; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.center { text-align: center; }
+.mt { margin-top: 16px; }
+.tag-training { color: #ffd166; }
+select {
+  font-family: inherit;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid #444466;
+  background: #1a1a2e;
+  color: white;
+  font-size: 0.95rem;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #ff6b9d;
+  color: white;
+  padding: 12px 22px;
+  border-radius: 25px;
+  font-weight: bold;
+  opacity: 0;
+  transition: all 0.25s;
+  z-index: 3000;
+  pointer-events: none;
+  font-size: 0.92rem;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const RUNNERS = [
+  { id: 'sushi', name: '寿司ロボ', emoji: '🍣', color: '#ff6b9d', speed: 3, stamina: 3,
+    bio: 'オールラウンダー',
+    ult: { name: '回転寿司ブースト', desc: '2・3周目突入時に一瞬加速' },
+    training: { type: 'time', name: '体幹', baseSeconds: 90 } },
+  { id: 'onigiri', name: 'おにぎり侍', emoji: '🍙', color: '#ffd166', speed: 3, stamina: 3,
+    bio: '先行逃げ切り型',
+    ult: { name: '居合斬り', desc: '1周目前半に加速、後半やや失速' },
+    training: { type: 'reps', name: '腕立て伏せ', baseReps: 20 } },
+  { id: 'turtle', name: 'カメハメ吉', emoji: '🐢', color: '#06d6a0', speed: 2, stamina: 5,
+    bio: '後方追込の鬼',
+    ult: { name: '甲羅の加速', desc: '3周目突入後、3倍速で爆走追込' },
+    training: { type: 'reps', name: 'スクワット', baseReps: 25 } },
+  { id: 'rocket', name: 'ロケット部長', emoji: '🚀', color: '#8ecae6', speed: 3, stamina: 2,
+    bio: '爆走・暴発型',
+    ult: { name: '爆発推進', desc: 'ランダム暴発加速→反動で失速' },
+    training: { type: 'reps', name: 'バービー', baseReps: 10 } },
+  { id: 'ice', name: '氷ブロック', emoji: '🧊', color: '#a8dadc', speed: 3, stamina: 3,
+    bio: '逆境型・最終捲り',
+    ult: { name: 'アイスロード', desc: '3周目でトップ圏外なら加速発動' },
+    training: { type: 'time', name: '体幹', baseSeconds: 120 } },
+  { id: 'octopus', name: 'タコ先生', emoji: '🐙', color: '#e76f51', speed: 3, stamina: 3,
+    bio: '中堅の安定株',
+    ult: { name: '八本足ドリブル', desc: '3〜4位の位置で小加速' },
+    training: { type: 'reps', name: '腕立て伏せ', baseReps: 15 } },
+];
+
+const CONDITIONS = [
+  { key: 'good',   label: '絶好調', emoji: '🔥', mult: 1.15, color: '#ff6b9d' },
+  { key: 'normal', label: '普通',   emoji: '😐', mult: 1.00, color: '#a0a0b8' },
+  { key: 'bad',    label: '不調',   emoji: '😵', mult: 0.85, color: '#8ecae6' },
+];
+
+const RANK_MULT = [null, 0, 0.3, 0.6, 1.0, 1.5, 2.0];
+const STEP = 0.00030;
+const TOTAL_LAPS = 3;
+const CX = 450, CY = 250;
+const LANE_BASE_RX = 258, LANE_BASE_RY = 123;
+const LANE_STEP_RX = 16, LANE_STEP_RY = 10;
+const ULT_FLASH_MS = 1600;
+
+const state = {
+  screen: 'title',
+  players: [],
+  runnerConditions: {},
+  selectedPlayerId: null,
+  progresses: {},
+  ranking: [],
+  countdown: null,
+  comments: [],
+  raceRunning: false,
+  ultState: {},
+  assignments: {},
+};
+
+let lastLeaderId = null;
+let lastLapByRunner = {};
+let winnerFinishTime = null;
+let drag = null;
+
+const app = document.getElementById('app');
+
+// ---------- utils ----------
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function el(tag, attrs = {}, children = []) {
+  const e = document.createElement(tag);
+  for (const k in attrs) {
+    const v = attrs[k];
+    if (v == null || v === false) continue;
+    if (k === 'on') {
+      for (const ev in v) e.addEventListener(ev, v[ev]);
+    } else if (k === 'class') e.className = v;
+    else if (k === 'style') e.style.cssText = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of [].concat(children)) {
+    if (c == null || c === false) continue;
+    e.appendChild(typeof c === 'object' ? c : document.createTextNode(String(c)));
+  }
+  return e;
+}
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 1400);
+}
+function formatTraining(t, mult) {
+  if (t.type === 'time') {
+    const sec = Math.round(t.baseSeconds * mult);
+    if (sec === 0) return `${t.name} 免除`;
+    if (sec < 60) return `${t.name} ${sec}秒`;
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return `${t.name} ${m}分${s > 0 ? s + '秒' : ''}`;
+  }
+  const reps = Math.round(t.baseReps * mult);
+  if (reps === 0) return `${t.name} 免除`;
+  return `${t.name} ${reps}回`;
+}
+
+// ---------- drag system (works for mouse + touch) ----------
+function makeDraggable(chipEl, playerId) {
+  chipEl.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    drag = {
+      playerId,
+      startX: e.clientX, startY: e.clientY,
+      active: false, ghost: null,
+      sourceEl: chipEl,
+      moved: false,
+    };
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+  });
+}
+function onPointerMove(e) {
+  if (!drag) return;
+  const dx = e.clientX - drag.startX;
+  const dy = e.clientY - drag.startY;
+  if (!drag.active && Math.hypot(dx, dy) > 8) {
+    drag.active = true;
+    const p = state.players.find(pl => pl.id === drag.playerId);
+    const g = document.createElement('div');
+    g.className = 'drag-ghost';
+    g.textContent = p ? p.name : '';
+    document.body.appendChild(g);
+    drag.ghost = g;
+    if (drag.sourceEl) drag.sourceEl.classList.add('dragging');
+  }
+  if (drag.active) {
+    e.preventDefault();
+    drag.ghost.style.left = e.clientX + 'px';
+    drag.ghost.style.top = e.clientY + 'px';
+    const target = getDropTarget(e.clientX, e.clientY);
+    document.querySelectorAll('.runner-card.drag-target').forEach(el => {
+      if (el !== target) el.classList.remove('drag-target');
+    });
+    if (target) target.classList.add('drag-target');
+  }
+}
+function onPointerUp(e) {
+  window.removeEventListener('pointermove', onPointerMove);
+  window.removeEventListener('pointerup', onPointerUp);
+  window.removeEventListener('pointercancel', onPointerUp);
+  if (!drag) return;
+  const wasActive = drag.active;
+  if (drag.ghost) drag.ghost.remove();
+  if (drag.sourceEl) drag.sourceEl.classList.remove('dragging');
+  document.querySelectorAll('.runner-card.drag-target').forEach(el => el.classList.remove('drag-target'));
+  if (wasActive) {
+    const target = getDropTarget(e.clientX, e.clientY);
+    if (target) {
+      const runnerId = target.getAttribute('data-runner-id');
+      tryPlace(drag.playerId, runnerId);
+    }
+    const suppress = (ev) => { ev.preventDefault(); ev.stopPropagation(); };
+    window.addEventListener('click', suppress, { once: true, capture: true });
+  }
+  drag = null;
+}
+function getDropTarget(x, y) {
+  const el = document.elementFromPoint(x, y);
+  if (!el) return null;
+  return el.closest('.runner-card[data-runner-id]');
+}
+
+// ---------- core render ----------
+function render() {
+  app.innerHTML = '';
+  ({
+    title:    renderTitle,
+    register: renderRegister,
+    select:   renderSelect,
+    race:     renderRace,
+    result:   renderResult,
+  })[state.screen]();
+}
+
+function renderTitle() {
+  app.appendChild(el('div', { class: 'title' }, [
+    el('h1', {}, ['アリガトRUN 🏃']),
+    el('p', {}, ['6頭のマスコットが楕円グラウンドを3周する、筋トレ罰ゲームバトル。']),
+  ]));
+  app.appendChild(el('div', { class: 'card center' }, [
+    el('p', { class: 'muted', style: 'margin-bottom:20px' }, [
+      '名前登録 → 各自2体に賭ける → 応援 → 順位で罰ゲームの回数が変動。1位に賭けたら免除＋なすりつけ可能！',
+    ]),
+    el('button', { on: { click: () => { state.screen = 'register'; render(); } } }, ['はじめる']),
+  ]));
+}
+
+function renderRegister() {
+  const card = el('div', { class: 'card' });
+  card.appendChild(el('h2', {}, ['👥 プレイヤー登録（2〜10人）']));
+
+  const input = el('input', { type: 'text', placeholder: '名前を入力してEnter', maxlength: '12' });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') addPlayer(input); });
+  card.appendChild(el('div', { class: 'row mt' }, [
+    input,
+    el('button', { on: { click: () => addPlayer(input) } }, ['追加']),
+  ]));
+
+  const list = el('div', { class: 'player-list' });
+  state.players.forEach((p, i) => {
+    list.appendChild(el('div', { class: 'player-chip' }, [
+      `${i + 1}. ${p.name}`,
+      el('span', {
+        class: 'remove',
+        on: { click: () => { state.players.splice(i, 1); render(); } },
+      }, ['×']),
+    ]));
+  });
+  card.appendChild(list);
+
+  const canStart = state.players.length >= 2;
+  card.appendChild(el('div', { class: 'row mt' }, [
+    el('button', {
+      disabled: !canStart,
+      on: { click: () => goToSelect() },
+    }, [canStart ? 'ランナー選択へ →' : '2人以上必要']),
+    el('button', {
+      class: 'ghost',
+      on: { click: () => { state.screen = 'title'; render(); } },
+    }, ['戻る']),
+  ]));
+  app.appendChild(card);
+  setTimeout(() => input.focus(), 50);
+}
+
+function addPlayer(input) {
+  const name = input.value.trim();
+  if (!name) return;
+  if (state.players.length >= 10) { toast('10人までだよ'); return; }
+  if (state.players.some(p => p.name === name)) { toast('同じ名前は登録できないよ'); return; }
+  state.players.push({ id: 'p' + Math.random().toString(36).slice(2), name, pickIds: [] });
+  input.value = '';
+  render();
+  document.querySelector('input[type=text]')?.focus();
+}
+
+function goToSelect() {
+  state.players.forEach(p => p.pickIds = []);
+  state.selectedPlayerId = state.players[0]?.id || null;
+  randomizeConditions();
+  state.screen = 'select';
+  render();
+}
+
+function randomizeConditions() {
+  RUNNERS.forEach(r => {
+    const roll = Math.random();
+    state.runnerConditions[r.id] = roll < 0.28 ? 'good' : roll < 0.75 ? 'normal' : 'bad';
+  });
+}
+
+// ---------- select ----------
+function renderSelect() {
+  // Top card: instructions + pool
+  const card = el('div', { class: 'card' });
+  card.appendChild(el('h2', {}, ['🎯 各自2体に賭けよう']));
+  card.appendChild(el('div', { class: 'banner' }, [
+    el('div', {}, ['名前を【ドラッグ】、または【クリック→ランナーをクリック】で配置。1人2体まで（同じ馬に2枚は✕）。'] ),
+    el('div', { class: 'rank-rule' }, [
+      el('span', { class: 'pill good' }, ['1位 免除']),
+      el('span', { class: 'pill' }, ['2位 ×0.3']),
+      el('span', { class: 'pill' }, ['3位 ×0.6']),
+      el('span', { class: 'pill' }, ['4位 ×1.0']),
+      el('span', { class: 'pill' }, ['5位 ×1.5']),
+      el('span', { class: 'pill bad' }, ['6位 ×2.0']),
+    ]),
+  ]));
+
+  const pool = state.players.filter(p => (p.pickIds?.length || 0) < 2);
+  const poolRow = el('div', { class: 'player-chip-row' });
+  if (pool.length === 0) {
+    poolRow.appendChild(el('div', { class: 'muted' }, ['🎉 全員2体に賭けた！']));
+  } else {
+    pool.forEach(p => {
+      const selected = state.selectedPlayerId === p.id;
+      const count = p.pickIds?.length || 0;
+      const chip = el('div', {
+        class: 'player-chip big' + (selected ? ' selected' : ''),
+        'data-player-id': p.id,
+        on: { click: () => {
+          state.selectedPlayerId = selected ? null : p.id;
+          render();
+        } },
+      }, [
+        el('span', {}, [p.name]),
+        el('span', { class: 'pick-count' }, [`${count}/2`]),
+      ]);
+      makeDraggable(chip, p.id);
+      poolRow.appendChild(chip);
+    });
+  }
+  card.appendChild(el('div', { class: 'muted small', style: 'margin:8px 0 4px' }, [
+    `未配置プール: ${pool.length} / ${state.players.length}人`,
+  ]));
+  card.appendChild(poolRow);
+  app.appendChild(card);
+
+  // Runner grid
+  const gridCard = el('div', { class: 'card' });
+  const grid = el('div', { class: 'runner-grid' });
+  const canPlace = !!state.selectedPlayerId;
+
+  RUNNERS.forEach(r => {
+    const placedOnThis = state.players.filter(p => (p.pickIds || []).includes(r.id));
+    const cond = CONDITIONS.find(c => c.key === state.runnerConditions[r.id]);
+    const starBar = (val) => el('span', { class: 'stat-bar' }, [
+      el('span', { class: 'filled' }, ['●'.repeat(val)]),
+      el('span', { class: 'empty' }, ['·'.repeat(5 - val)]),
+    ]);
+    const betSlotChildren = placedOnThis.length === 0
+      ? [el('div', { class: 'muted tiny' }, [canPlace ? '👆 ここにドロップ／クリック' : '（ここにネームカードを置く）'])]
+      : placedOnThis.map(p => el('div', {
+          class: 'player-chip small placed',
+          on: { click: (e) => { e.stopPropagation(); unplace(p.id, r.id); } },
+        }, [p.name + ' ✕']));
+
+    const runnerCard = el('div', {
+      class: 'runner-card' + (canPlace ? ' clickable' : ''),
+      'data-runner-id': r.id,
+      on: { click: () => { if (canPlace && state.selectedPlayerId) tryPlace(state.selectedPlayerId, r.id); } },
+    }, [
+      el('div', { class: 'runner-header' }, [
+        el('span', { class: 'emoji' }, [r.emoji]),
+        el('div', {}, [
+          el('div', { class: 'name' }, [r.name]),
+          el('div', { class: 'bio' }, [r.bio]),
+        ]),
+      ]),
+      el('div', { class: 'stats' }, [
+        el('div', { class: 'stat-row' }, [
+          el('span', { class: 'stat-label' }, ['⚡ 速度']), starBar(r.speed),
+        ]),
+        el('div', { class: 'stat-row' }, [
+          el('span', { class: 'stat-label' }, ['💪 持久']), starBar(r.stamina),
+        ]),
+        el('div', { class: 'stat-row' }, [
+          el('span', { class: 'stat-label' }, ['🎲 調子']),
+          el('span', { class: 'condition', style: `color:${cond.color}` }, [`${cond.emoji} ${cond.label}`]),
+        ]),
+        el('div', { class: 'ult-box' }, [
+          el('div', { class: 'ult-name' }, [`💥 必殺『${r.ult.name}』`]),
+          el('div', { class: 'ult-desc' }, [r.ult.desc]),
+        ]),
+        el('div', { class: 'stat-row training' }, [
+          `📋 罰ゲーム基本: ${formatTraining(r.training, 1)}`,
+        ]),
+      ]),
+      el('div', { class: 'bet-slot' + (placedOnThis.length ? '' : ' empty') }, betSlotChildren),
+    ]);
+    grid.appendChild(runnerCard);
+  });
+  gridCard.appendChild(grid);
+
+  const allPlaced = state.players.every(p => (p.pickIds?.length || 0) === 2);
+  const remaining = state.players.reduce((s, p) => s + (2 - (p.pickIds?.length || 0)), 0);
+  gridCard.appendChild(el('div', { class: 'row mt' }, [
+    el('button', {
+      disabled: !allPlaced,
+      on: { click: () => startRace() },
+    }, [allPlaced ? '🏁 レース開始！' : `あと${remaining}枚配置`]),
+    el('button', {
+      class: 'secondary',
+      on: { click: () => { randomizeConditions(); render(); } },
+    }, ['🎲 調子を再抽選']),
+    el('button', {
+      class: 'ghost',
+      on: { click: () => {
+        state.players.forEach(p => p.pickIds = []);
+        state.selectedPlayerId = state.players[0]?.id || null;
+        render();
+      } },
+    }, ['配置リセット']),
+    el('button', {
+      class: 'ghost',
+      on: { click: () => { state.screen = 'register'; render(); } },
+    }, ['登録に戻る']),
+  ]));
+  app.appendChild(gridCard);
+}
+
+function tryPlace(playerId, runnerId) {
+  const p = state.players.find(pl => pl.id === playerId);
+  if (!p) return;
+  if (!p.pickIds) p.pickIds = [];
+  if (p.pickIds.length >= 2) { toast(`${p.name}は既に2体にかけてます`); return; }
+  if (p.pickIds.includes(runnerId)) { toast('同じランナーに2枚は置けない'); return; }
+  p.pickIds.push(runnerId);
+  if (p.pickIds.length < 2) {
+    state.selectedPlayerId = p.id;
+  } else {
+    const next = state.players.find(pl => (pl.pickIds?.length || 0) < 2);
+    state.selectedPlayerId = next ? next.id : null;
+  }
+  render();
+}
+function unplace(playerId, runnerId) {
+  const p = state.players.find(pl => pl.id === playerId);
+  if (!p || !p.pickIds) return;
+  p.pickIds = p.pickIds.filter(id => id !== runnerId);
+  state.selectedPlayerId = p.id;
+  render();
+}
+
+// ---------- race ----------
+function runnerPosition(progress, laneIdx) {
+  const rx = LANE_BASE_RX + laneIdx * LANE_STEP_RX;
+  const ry = LANE_BASE_RY + laneIdx * LANE_STEP_RY;
+  const lapT = progress % 1;
+  const angleMath = Math.PI / 2 + lapT * 2 * Math.PI;
+  return { x: CX + rx * Math.cos(angleMath), y: CY - ry * Math.sin(angleMath) };
+}
+
+function startRace() {
+  state.screen = 'race';
+  state.progresses = {};
+  state.ranking = [];
+  state.comments = [];
+  state.ultState = {};
+  RUNNERS.forEach(r => { state.progresses[r.id] = 0; state.ultState[r.id] = {}; });
+  lastLeaderId = null;
+  lastLapByRunner = {};
+  winnerFinishTime = null;
+  state.countdown = '3';
+  state.raceRunning = false;
+  render();
+
+  addComment('👟 各馬スタートラインへ…');
+  setTimeout(() => { state.countdown = '2'; updateCountdownDOM(true); }, 900);
+  setTimeout(() => { state.countdown = '1'; updateCountdownDOM(true); }, 1800);
+  setTimeout(() => { state.countdown = 'GO!'; updateCountdownDOM(true); addComment('🚩 スタート！'); }, 2700);
+  setTimeout(() => {
+    state.countdown = null;
+    updateCountdownDOM(false);
+    state.raceRunning = true;
+    requestAnimationFrame(raceTick);
+  }, 3600);
+}
+
+function renderRace() {
+  const runnersSvg = RUNNERS.map((r, i) => {
+    const pos = runnerPosition(0, i);
+    return `
+      <g id="token-${r.id}" class="runner-svg" transform="translate(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)})">
+        <circle r="13" fill="${r.color}" stroke="white" stroke-width="2.5" />
+        <text y="6" text-anchor="middle" font-size="17">${r.emoji}</text>
+      </g>`;
+  }).join('');
+
+  app.innerHTML = `
+    <div class="card">
+      <h2>🏁 アリガトRUN — 3周レース</h2>
+      <div class="muted small">グラウンドを反時計回りに3周。必殺技発動と順位変動をみんなで応援！</div>
+    </div>
+    <div class="race-layout">
+    <div class="race-main">
+    <div class="card track-card">
+      <div class="track-wrapper">
+        <svg id="track" viewBox="0 0 900 500" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <pattern id="checker" width="10" height="10" patternUnits="userSpaceOnUse">
+              <rect width="10" height="10" fill="white"/>
+              <rect width="5" height="5" fill="black"/>
+              <rect x="5" y="5" width="5" height="5" fill="black"/>
+            </pattern>
+            <radialGradient id="grass" cx="50%" cy="50%" r="70%">
+              <stop offset="0%" stop-color="#3a7a48"/>
+              <stop offset="100%" stop-color="#1e4a28"/>
+            </radialGradient>
+          </defs>
+          <rect x="0" y="0" width="900" height="500" fill="#0f2515"/>
+          <ellipse cx="450" cy="250" rx="405" ry="225" fill="url(#grass)"/>
+          <ellipse cx="450" cy="250" rx="370" ry="185" fill="#c48b5a"/>
+          <ellipse cx="450" cy="250" rx="368" ry="183" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>
+          <ellipse cx="450" cy="250" rx="230" ry="90" fill="#3a7a48"/>
+          <g stroke="rgba(255,255,255,0.22)" fill="none" stroke-dasharray="6 6" stroke-width="1.2">
+            <ellipse cx="450" cy="250" rx="248" ry="108"/>
+            <ellipse cx="450" cy="250" rx="283" ry="135"/>
+            <ellipse cx="450" cy="250" rx="318" ry="160"/>
+            <ellipse cx="450" cy="250" rx="352" ry="178"/>
+          </g>
+          <rect x="443" y="65" width="14" height="110" fill="url(#checker)"/>
+          <text x="450" y="55" text-anchor="middle" fill="white" font-size="14" font-weight="bold" style="letter-spacing:2px">🏁 START / FINISH</text>
+          <g id="runners">${runnersSvg}</g>
+        </svg>
+        <div id="countdown-overlay" class="countdown-overlay" style="display:none"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📣 実況</h3>
+      <div id="commentary" class="commentary-feed"></div>
+    </div>
+    </div>
+    <div class="race-side">
+    <div class="card">
+      <h3>📊 現在順位</h3>
+      <div id="live-ranking" class="live-ranking"></div>
+    </div>
+    </div>
+    </div>
+  `;
+  updateRanking();
+  updateCommentary();
+  updateCountdownDOM(true);
+}
+
+function updateCountdownDOM(animate) {
+  const e = document.getElementById('countdown-overlay');
+  if (!e) return;
+  if (state.countdown === null) {
+    e.style.display = 'none';
+    e.textContent = '';
+    e.classList.remove('animate');
+  } else {
+    e.style.display = 'flex';
+    e.textContent = state.countdown;
+    if (animate) {
+      e.classList.remove('animate');
+      void e.offsetWidth;
+      e.classList.add('animate');
+    }
+  }
+}
+
+function getPositionMap() {
+  const map = {};
+  // finished runners take 1..ranking.length
+  state.ranking.forEach((rid, i) => { map[rid] = i + 1; });
+  const living = RUNNERS.filter(r => !state.ranking.includes(r.id));
+  living.sort((a, b) => state.progresses[b.id] - state.progresses[a.id]);
+  living.forEach((r, i) => { map[r.id] = state.ranking.length + i + 1; });
+  return map;
+}
+
+function applyUltimate(r, now, prog, position) {
+  const us = state.ultState[r.id];
+  const lap = Math.floor(prog) + 1;
+  switch (r.id) {
+    case 'sushi': {
+      if ((lap === 2 || lap === 3) && us.lastLap !== lap) {
+        us.lastLap = lap;
+        us.boostUntil = now + 1100;
+        triggerUlt(r);
+      }
+      return now < (us.boostUntil || 0) ? 1.55 : 1;
+    }
+    case 'onigiri': {
+      if (prog < 0.4 && !us.announced) { us.announced = true; triggerUlt(r); }
+      return prog < 0.4 ? 1.5 : (prog < 1.0 ? 0.92 : 1);
+    }
+    case 'turtle': {
+      if (lap >= 3 && !us.announced) { us.announced = true; triggerUlt(r); }
+      if (lap >= 3) return 3.0;
+      if (lap >= 2) return 1.04;
+      return 1;
+    }
+    case 'rocket': {
+      if (!us.nextRoll) us.nextRoll = now + 1500;
+      if (now >= us.nextRoll) {
+        us.nextRoll = now + 900;
+        if (!us.boostUntil && !us.cooldownUntil && Math.random() < 0.20) {
+          us.boostUntil = now + 1400;
+          triggerUlt(r);
+        }
+      }
+      if (us.boostUntil && now < us.boostUntil) return 1.9;
+      if (us.boostUntil && now >= us.boostUntil && !us.cooldownUntil) {
+        us.cooldownUntil = now + 1400;
+        us.boostUntil = null;
+      }
+      if (us.cooldownUntil && now < us.cooldownUntil) return 0.78;
+      if (us.cooldownUntil && now >= us.cooldownUntil) us.cooldownUntil = null;
+      return 1;
+    }
+    case 'ice': {
+      const canBoost = lap >= 3 && position >= 3;
+      if (canBoost && !us.announced) { us.announced = true; triggerUlt(r); }
+      return canBoost ? 1.45 : 1;
+    }
+    case 'octopus': {
+      const isMid = position >= 3 && position <= 4;
+      if (isMid && !us.announced && lap >= 1 && prog > 0.3) {
+        us.announced = true; triggerUlt(r);
+      }
+      return isMid ? 1.1 : 1;
+    }
+  }
+  return 1;
+}
+
+function triggerUlt(r) {
+  const c = `💥 ${r.emoji} ${r.name} 必殺『${r.ult.name}』発動！`;
+  state.comments.unshift({ text: c, kind: 'ult' });
+  if (state.comments.length > 10) state.comments.pop();
+  updateCommentary();
+  const token = document.getElementById('token-' + r.id);
+  if (token) {
+    token.classList.remove('ult');
+    void token.offsetWidth;
+    token.classList.add('ult');
+    setTimeout(() => token.classList.remove('ult'), ULT_FLASH_MS);
+  }
+}
+
+function raceTick(now) {
+  if (!state.raceRunning) return;
+  const posMap = getPositionMap();
+
+  RUNNERS.forEach((r) => {
+    if (state.ranking.includes(r.id)) return;
+    const cond = CONDITIONS.find(c => c.key === state.runnerConditions[r.id]);
+    const prog = state.progresses[r.id];
+    const staminaFactor = r.stamina / 5;
+    const fatigue = Math.max(0.55, 1 - (prog / TOTAL_LAPS) * (1 - staminaFactor) * 0.7);
+    const noise = 0.7 + Math.random() * 0.6;
+    const ultMult = applyUltimate(r, now, prog, posMap[r.id] || 6);
+    const delta = r.speed * cond.mult * fatigue * noise * ultMult * STEP;
+    state.progresses[r.id] += delta;
+    if (state.progresses[r.id] >= TOTAL_LAPS) {
+      state.progresses[r.id] = TOTAL_LAPS;
+      state.ranking.push(r.id);
+      if (winnerFinishTime === null) {
+        winnerFinishTime = now;
+        addComment(`🏆🏆 ${r.emoji} ${r.name} ゴール！ 優勝！！`);
+      } else {
+        addComment(`🏁 ${r.emoji} ${r.name} ${state.ranking.length}位でゴール`);
+      }
+    }
+  });
+
+  updateTokens();
+
+  if (!raceTick._lastRankTime || now - raceTick._lastRankTime > 220) {
+    updateRanking();
+    raceTick._lastRankTime = now;
+  }
+  if (!raceTick._lastCommentTime || now - raceTick._lastCommentTime > 900) {
+    checkCommentary();
+    raceTick._lastCommentTime = now;
+  }
+
+  if (winnerFinishTime !== null && now - winnerFinishTime > 3000) {
+    const remaining = RUNNERS.filter(r => !state.ranking.includes(r.id));
+    remaining.sort((a, b) => state.progresses[b.id] - state.progresses[a.id]);
+    remaining.forEach(r => state.ranking.push(r.id));
+    state.raceRunning = false;
+    addComment('🎬 レース終了！');
+    updateRanking();
+    setTimeout(() => { computeResult(); render(); }, 1800);
+    return;
+  }
+
+  requestAnimationFrame(raceTick);
+}
+
+function updateTokens() {
+  RUNNERS.forEach((r, i) => {
+    const token = document.getElementById('token-' + r.id);
+    if (!token) return;
+    const pos = runnerPosition(state.progresses[r.id], i);
+    token.setAttribute('transform', `translate(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)})`);
+  });
+}
+
+function updateRanking() {
+  const elR = document.getElementById('live-ranking');
+  if (!elR) return;
+  const sorted = [...RUNNERS].map((r) => ({ r, prog: state.progresses[r.id] || 0 })).sort((a, b) => {
+    const af = state.ranking.indexOf(a.r.id);
+    const bf = state.ranking.indexOf(b.r.id);
+    if (af !== -1 && bf !== -1) return af - bf;
+    if (af !== -1) return -1;
+    if (bf !== -1) return 1;
+    return b.prog - a.prog;
+  });
+  elR.innerHTML = sorted.map((item) => {
+    const r = item.r;
+    const prog = item.prog;
+    const lap = Math.min(TOTAL_LAPS, Math.floor(prog) + 1);
+    const lapPct = Math.floor(((prog % 1) * 100));
+    const bettors = state.players.filter(p => (p.pickIds || []).includes(r.id)).map(p => p.name).join('・') || '（賭け手なし）';
+    const finishPos = state.ranking.indexOf(r.id) + 1;
+    const finished = finishPos > 0;
+    const cond = CONDITIONS.find(c => c.key === state.runnerConditions[r.id]);
+    return `
+      <div class="rank-row ${finished ? 'finished' : ''}">
+        <div class="rank-pos">${finished ? finishPos + '位🏁' : ''}</div>
+        <div class="rank-emoji">${r.emoji}</div>
+        <div class="rank-body">
+          <div class="rank-name">${esc(r.name)} <span class="muted small">${cond.emoji}${cond.label}</span></div>
+          <div class="rank-lap">Lap ${finished ? TOTAL_LAPS : lap}/${TOTAL_LAPS}${finished ? '' : ` (${lapPct}%)`}</div>
+          <div class="rank-bettors">💰 ${esc(bettors)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateCommentary() {
+  const elC = document.getElementById('commentary');
+  if (!elC) return;
+  elC.innerHTML = state.comments.map(c => {
+    if (typeof c === 'string') return `<div class="comment">${c}</div>`;
+    return `<div class="comment ${c.kind || ''}">${c.text}</div>`;
+  }).join('');
+}
+
+function addComment(text) {
+  state.comments.unshift(text);
+  if (state.comments.length > 10) state.comments.pop();
+  updateCommentary();
+}
+
+function checkCommentary() {
+  const living = RUNNERS.filter(r => !state.ranking.includes(r.id));
+  const sorted = [...living].sort((a, b) => state.progresses[b.id] - state.progresses[a.id]);
+  const leader = sorted[0];
+  if (leader && leader.id !== lastLeaderId) {
+    if (lastLeaderId === null) addComment(`👑 先頭は ${leader.emoji} ${leader.name}！`);
+    else addComment(`⚡ ${leader.emoji} ${leader.name} が先頭を奪取！`);
+    lastLeaderId = leader.id;
+  }
+  RUNNERS.forEach(r => {
+    if (state.ranking.includes(r.id)) return;
+    const lap = Math.min(TOTAL_LAPS, Math.floor(state.progresses[r.id]) + 1);
+    if (lastLapByRunner[r.id] !== lap && lap >= 2) {
+      addComment(`🔁 ${r.emoji} ${r.name} が ${lap} 周目へ！`);
+    }
+    lastLapByRunner[r.id] = lap;
+  });
+}
+
+// ---------- result ----------
+function computeResult() {
+  state.assignments = {};
+  state.players.forEach(p => {
+    const picks = (p.pickIds || []).map(rid => {
+      const runner = RUNNERS.find(r => r.id === rid);
+      const rank = state.ranking.indexOf(rid) + 1;
+      const mult = RANK_MULT[rank] ?? 1;
+      return { runner, rank, mult };
+    });
+    state.assignments[p.id] = {
+      picks,
+      nasuritsukeTo: null,
+      receivedFrom: [],
+      canNasuritsuke: picks.some(pk => pk.rank === 1),
+    };
+  });
+  state.screen = 'result';
+}
+
+function recomputeReceived() {
+  state.players.forEach(p => state.assignments[p.id].receivedFrom = []);
+  state.players.forEach(sender => {
+    const a = state.assignments[sender.id];
+    if (a.canNasuritsuke && a.nasuritsukeTo) {
+      a.picks.filter(pk => pk.mult > 0).forEach(pk => {
+        state.assignments[a.nasuritsukeTo].receivedFrom.push({
+          fromName: sender.name,
+          runner: pk.runner,
+          rank: pk.rank,
+          mult: pk.mult,
+        });
+      });
+    }
+  });
+}
+
+function renderResult() {
+  recomputeReceived();
+
+  // Ranking
+  const rankCard = el('div', { class: 'card' });
+  rankCard.appendChild(el('h2', {}, ['🏆 レース結果']));
+  const rankingList = el('ol', { class: 'ranking-list' });
+  state.ranking.forEach((rid, i) => {
+    const r = RUNNERS.find(x => x.id === rid);
+    const bettors = state.players.filter(p => (p.pickIds || []).includes(rid));
+    const rankClass = i < 3 ? ` rank-${i + 1}` : '';
+    const mult = RANK_MULT[i + 1];
+    rankingList.appendChild(el('li', {}, [
+      el('div', { class: 'rank-badge' + rankClass }, [String(i + 1)]),
+      el('div', { style: 'font-size:1.8rem; width:40px; text-align:center' }, [r.emoji]),
+      el('div', { style: 'flex:1; min-width:0' }, [
+        el('div', { class: 'big' }, [`${r.name} `, el('span', { class: 'muted small' }, [`×${mult}`])]),
+        el('div', { class: 'tag-training', style: 'font-size:0.85rem' }, [
+          `基本: ${formatTraining(r.training, 1)} → 実際: ${formatTraining(r.training, mult)}`,
+        ]),
+        bettors.length
+          ? el('div', { class: 'muted small' }, ['賭けた人: ' + bettors.map(p => p.name).join('・')])
+          : el('div', { class: 'muted small' }, ['賭けた人なし']),
+      ]),
+    ]));
+  });
+  rankCard.appendChild(rankingList);
+  app.appendChild(rankCard);
+
+  // Nasuritsuke
+  const winners = state.players.filter(p => state.assignments[p.id].canNasuritsuke);
+  if (winners.length) {
+    const nasuCard = el('div', { class: 'card' });
+    nasuCard.appendChild(el('h2', {}, ['😈 なすりつけタイム']));
+    nasuCard.appendChild(el('p', { class: 'muted', style: 'margin-bottom:12px' }, [
+      '2体のうち1つでも1位に賭けた人は「なすりつけ権」を獲得。発動すると自分の全分を指定者へ全額転送（自分は完全免除）。',
+    ]));
+    winners.forEach(w => {
+      const a = state.assignments[w.id];
+      const sel = el('select', {
+        on: { change: (e) => { a.nasuritsukeTo = e.target.value || null; render(); } },
+      }, [
+        el('option', { value: '' }, ['― なすりつけしない（自分でやる）―']),
+        ...state.players.filter(p => p.id !== w.id).map(p =>
+          el('option', { value: p.id, selected: a.nasuritsukeTo === p.id }, [p.name])),
+      ]);
+      const pushItems = a.picks.filter(pk => pk.mult > 0).map(pk =>
+        `${pk.runner.emoji}${pk.runner.name}(${pk.rank}位): ${formatTraining(pk.runner.training, pk.mult)}`
+      );
+      nasuCard.appendChild(el('div', { class: 'assignment winner' }, [
+        el('div', { class: 'big' }, [`🎉 ${w.name} さん`]),
+        el('div', { class: 'tag-training', style: 'margin:6px 0; font-size:0.9rem' }, [
+          pushItems.length ? `押し付け内容: ${pushItems.join(' ＋ ')}` : '押し付け内容: 全部免除なのでナシ',
+        ]),
+        el('div', {}, ['相手: ', sel]),
+      ]));
+    });
+    app.appendChild(nasuCard);
+  }
+
+  // Final per-player
+  const finalCard = el('div', { class: 'card' });
+  finalCard.appendChild(el('h2', {}, ['📋 最終トレーニングメニュー']));
+  state.players.forEach(p => {
+    const a = state.assignments[p.id];
+    const didNasuri = a.canNasuritsuke && a.nasuritsukeTo;
+    const items = [];
+
+    if (didNasuri) {
+      items.push(el('div', { class: 'assignment safe' }, [`✨ なすりつけ成功！ 自分の分は全て免除`]));
+    } else {
+      a.picks.forEach(pk => {
+        const exempt = pk.mult === 0;
+        items.push(el('div', { class: 'pick-line' + (exempt ? ' exempt' : '') }, [
+          `${pk.runner.emoji} ${pk.runner.name} (${pk.rank}位) → ${formatTraining(pk.runner.training, pk.mult)}`,
+          el('span', { class: 'mult-tag' }, [`×${pk.mult}`]),
+        ]));
+      });
+    }
+    a.receivedFrom.forEach(rec => {
+      items.push(el('div', { class: 'assignment extra' }, [
+        `💢 ${rec.fromName} からなすりつけ: ${formatTraining(rec.runner.training, rec.mult)}（${rec.runner.emoji}${rec.runner.name} ${rec.rank}位）`,
+      ]));
+    });
+
+    const doingCount = (didNasuri ? 0 : a.picks.filter(pk => pk.mult > 0).length) + a.receivedFrom.length;
+    const headerColor = doingCount === 0 ? '#06d6a0' : doingCount >= 3 ? '#ff6b9d' : '#eaeaea';
+    const headerEmoji = doingCount === 0 ? '😇' : doingCount >= 3 ? '💀' : '😅';
+
+    finalCard.appendChild(el('div', { class: 'assignment' }, [
+      el('div', { class: 'big', style: `color:${headerColor}` }, [`${headerEmoji} ${p.name} さん`]),
+      ...items,
+    ]));
+  });
+  app.appendChild(finalCard);
+
+  // Actions
+  const actions = el('div', { class: 'card center' });
+  actions.appendChild(el('button', {
+    on: { click: () => goToSelect() },
+  }, ['🔄 もう一戦（同じメンバー）']));
+  actions.appendChild(el('span', {}, [' ']));
+  actions.appendChild(el('button', {
+    class: 'secondary',
+    on: { click: () => { state.players = []; state.screen = 'title'; render(); } },
+  }, ['タイトルへ']));
+  app.appendChild(actions);
+}
+
+render();
+</script>
+</body>
+</html>
