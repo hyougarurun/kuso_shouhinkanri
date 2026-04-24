@@ -160,11 +160,11 @@ export function CaptionBlock({ product, text, onUpdate }: Props) {
           ref={textareaRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          rows={12}
-          className="w-full text-[11px] font-mono bg-zinc-50 p-2 rounded border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow whitespace-pre-wrap"
+          rows={24}
+          className="w-full text-[12px] font-mono bg-zinc-50 p-3 rounded border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-brand-yellow whitespace-pre-wrap leading-relaxed"
         />
       ) : draft ? (
-        <pre className="whitespace-pre-wrap text-[11px] font-mono bg-zinc-50 p-2 rounded max-h-60 overflow-y-auto">
+        <pre className="whitespace-pre-wrap text-[12px] font-mono bg-zinc-50 p-3 rounded max-h-[480px] overflow-y-auto leading-relaxed">
           {draft}
         </pre>
       ) : (
