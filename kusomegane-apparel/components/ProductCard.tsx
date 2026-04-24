@@ -4,7 +4,6 @@ import { memo } from "react"
 import { useRouter } from "next/navigation"
 import { Product } from "@/types"
 import { StatusBadge } from "./StatusBadge"
-import { ProgressBar } from "./ProgressBar"
 import { SampleCountdownLabel } from "./SampleCountdown"
 import { getProductStatus, getProgress } from "@/lib/productStatus"
 import { getNextActionLabel } from "@/lib/nextAction"
@@ -63,6 +62,19 @@ function ProductCardImpl({ product, onClearEstimation }: ProductCardProps) {
           className="absolute left-0 top-0 bottom-0 w-1 bg-brand-yellow"
         />
       )}
+
+      {/* 上辺: 進捗バー（カード幅全体） */}
+      <div
+        className="absolute left-0 top-0 right-0 h-1 bg-zinc-100"
+        aria-label={`進捗 ${done}/${total}`}
+      >
+        <div
+          className={`h-full transition-all ${
+            status === "done" ? "bg-green-500" : "bg-brand-yellow"
+          }`}
+          style={{ width: `${total === 0 ? 0 : (done / total) * 100}%` }}
+        />
+      </div>
 
       {/* 左: メインサムネ 176px */}
       <div className="relative w-44 h-44 shrink-0 rounded-md overflow-hidden bg-zinc-100">
@@ -176,16 +188,11 @@ function ProductCardImpl({ product, onClearEstimation }: ProductCardProps) {
         </div>
       )}
 
-      {/* 右: ステータス + 進捗 + カウントダウン */}
+      {/* 右: ステータス + 進捗カウント + カウントダウン */}
       <div className="shrink-0 flex flex-col justify-between items-end py-0.5 min-w-[150px]">
         <StatusBadge status={status} />
-        <div className="flex items-center gap-1.5 w-full">
-          <div className="flex-1 min-w-[90px]">
-            <ProgressBar done={done} total={total} />
-          </div>
-          <span className="text-xs font-bold text-zinc-700 shrink-0">
-            {done}/{total}
-          </span>
+        <div className="text-xs font-bold text-zinc-700">
+          {done}/{total}
         </div>
         {!step5Done && countdown ? (
           <div className="origin-right">
